@@ -56,3 +56,19 @@ Thumbs.db
 
 # Configuration files
 *.ini
+config.ini
+
+# Playbook files
+playbook.txt
+*.playbook
+
+# Tests and Documentation
+tests/
+docs/
+*.md
+!README.md
+!README_DEV.md
+!PROJECT_SUMMARY.md
+
+# Examples
+examples/
