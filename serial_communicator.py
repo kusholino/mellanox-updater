@@ -599,10 +599,14 @@ def execute_playbook(port, baudrate, playbook_steps, timeout, prompt_symbol='>',
             except Exception as e:
                 log_error(f"Error closing serial port: {e}")
 
-def parse_config_and_playbook(config_file):
+def parse_config_and_playbook(config_file, playbook_file_override=None):
     """
     Reads and validates the config file.
     Returns playbook steps, settings, pagination config, and a custom success message.
+    
+    Args:
+        config_file (str): Path to the configuration file
+        playbook_file_override (str, optional): Path to playbook file to use instead of config setting
     """
     try:
         log_info("Parsing configuration file")
@@ -648,8 +652,14 @@ def parse_config_and_playbook(config_file):
 
         # Parse Playbook configuration from external file
         try:
-            playbook_config = config['Playbook']
-            playbook_file = playbook_config.get('PlaybookFile', 'playbook.txt')
+            # Use override playbook file if provided, otherwise use config setting
+            if playbook_file_override:
+                playbook_file = playbook_file_override
+                log_info(f"Using command-line specified playbook: {playbook_file}")
+            else:
+                playbook_config = config['Playbook']
+                playbook_file = playbook_config.get('PlaybookFile', 'playbook.txt')
+                log_debug(f"Using config-specified playbook: {playbook_file}")
             
             # Handle relative and absolute paths
             if not os.path.isabs(playbook_file):
@@ -671,7 +681,10 @@ def parse_config_and_playbook(config_file):
                 raise ValueError(f"The playbook file '{playbook_file}' is empty.")
                 
         except KeyError:
-            raise ValueError("Missing required [Playbook] section in config file.")
+            # Only raise this error if no override was provided
+            if not playbook_file_override:
+                raise ValueError("Missing required [Playbook] section in config file.")
+            # If override was provided but config section is missing, that's okay
         
         playbook_steps = []
         success_message = None # To store the custom success message
@@ -773,9 +786,11 @@ def parse_arguments():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python3 serial_communicator.py              # Run with progress bar
-  python3 serial_communicator.py --verbose    # Run with detailed logging
-  python3 serial_communicator.py -v           # Short form for verbose
+  python3 serial_communicator.py                           # Run with progress bar
+  python3 serial_communicator.py --verbose                 # Run with detailed logging
+  python3 serial_communicator.py -v                        # Short form for verbose
+  python3 serial_communicator.py --playbook custom.txt     # Use custom playbook file
+  python3 serial_communicator.py -p examples/example1.txt  # Use example playbook
         """
     )
     
@@ -791,6 +806,11 @@ Examples:
         help='Path to configuration file (default: config.ini)'
     )
     
+    parser.add_argument(
+        '-p', '--playbook',
+        help='Path to playbook file (overrides PlaybookFile setting in config)'
+    )
+    
     return parser.parse_args()
 
 
@@ -802,10 +822,14 @@ if __name__ == "__main__":
         if args.verbose:
             log_section("Mellanox Device Updater - Verbose Mode")
             log_info(f"Loading configuration from {args.config}")
+            if args.playbook:
+                log_info(f"Using custom playbook: {args.playbook}")
         else:
             print(f"{Colors.BOLD}{Colors.WHITE}Mellanox Device Updater{Colors.END}")
+            if args.playbook:
+                print(f"Using custom playbook: {args.playbook}")
         
-        result = parse_config_and_playbook(args.config)
+        result = parse_config_and_playbook(args.config, args.playbook)
         baud_rate, timeout, playbook_steps, success_message, prompt_symbol, pagination_enabled, pagination_delay, custom_pagination_patterns = result
         
         # Exit if the config file had errors.
