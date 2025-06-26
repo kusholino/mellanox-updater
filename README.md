@@ -164,6 +164,17 @@ Automatically detects device prompts like:
 - Invalid command detection
 - File not found errors
 
+### ✅ **Smart Pre-Login Detection**
+- Automatically detects if already logged in
+- Intelligently skips all login-related steps when already authenticated
+- Preserves actual commands and configuration steps
+- Handles complex login sequences with multiple prompts and credentials
+
+### ✅ **Serial Port Protection**
+- Detects if port is already in use
+- Prevents conflicts with other applications
+- Clear error messages for port access issues
+
 ## 🔧 Usage Examples
 
 ### Standard Operation
@@ -248,7 +259,32 @@ sudo usermod -a -G dialout $USER
 
 4. **Test with a simple playbook** first
 
-## 📁 File Structure
+## � Troubleshooting
+
+### Common Issues
+
+**"Port is already in use" or "Permission denied"**
+- Close other serial applications (PuTTY, minicom, etc.)
+- On Linux, try: `sudo python3 serial_communicator.py`
+- Check if another instance is running
+
+**"Device requires login" when already logged in**
+- The pre-login detection may have failed
+- Manually add a `SEND \n` at the start of your playbook
+- Check if device has unusual prompt formatting
+
+**"Login steps not being skipped properly"**
+- The improved login filtering should handle most cases automatically
+- If login steps are still executed when already authenticated, check verbose logs
+- Ensure your playbook uses standard login patterns (WAIT login:, SEND admin, etc.)
+- Contact support if login filtering isn't working for your specific device
+
+**Commands fail or timeout**
+- Increase timeout in config.ini
+- Use verbose mode to see actual device responses
+- Verify commands work when typed manually
+
+## �📁 File Structure
 
 ```
 mellanox-updater/

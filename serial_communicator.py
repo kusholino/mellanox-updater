@@ -112,7 +112,7 @@ def execute_playbook(port, baudrate, playbook_steps, timeout, prompt_symbol='>',
     
     # Initialize progress bar if not in verbose mode
     if not verbose:
-        total_steps = len([step for step in playbook_steps if step[0] in ['command', 'wait', 'pause']])
+        total_steps = len([step for step in playbook_steps if step[0] in ['command', 'send', 'wait', 'pause']])
         PROGRESS_BAR = tqdm(total=total_steps + 3, desc="Connecting", unit="step", 
                            bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]')
     
@@ -123,9 +123,49 @@ def execute_playbook(port, baudrate, playbook_steps, timeout, prompt_symbol='>',
         update_progress("Opening serial port")
         
         try:
-            ser = serial.Serial(port, baudrate, timeout=1)
+                # Check if port is already in use by another process
+                try:
+                    # Try to open with exclusive access
+                    test_ser = serial.Serial()
+                    test_ser.port = port
+                    test_ser.baudrate = baudrate
+                    test_ser.timeout = 0.5
+                    # Note: exclusive flag may not be supported on all platforms
+                    if hasattr(test_ser, 'exclusive'):
+                        test_ser.exclusive = True  # This will fail if port is in use
+                    test_ser.open()
+                    test_ser.close()
+                    log_debug("Port availability check passed")
+                except serial.SerialException as e:
+                    if "access denied" in str(e).lower() or "permission denied" in str(e).lower():
+                        log_error(f"Port {port} is already in use by another application or requires elevated permissions")
+                        log_error("Please close other serial applications or run with appropriate permissions")
+                        return False
+                    elif "device busy" in str(e).lower() or "resource busy" in str(e).lower():
+                        log_error(f"Port {port} is currently busy/locked by another process")
+                        log_error("Please close other applications using this serial port")
+                        return False
+                    else:
+                        # Other serial exceptions, continue with normal opening
+                        log_debug(f"Port check exception (proceeding): {e}")
+                except Exception as e:
+                    # Non-serial exceptions, continue with normal opening
+                    log_debug(f"Port check failed (proceeding): {e}")
+                
+                ser = serial.Serial(port, baudrate, timeout=1)
         except serial.SerialException as e:
-            log_error(f"Failed to open serial port: {e}")
+            error_msg = str(e).lower()
+            if "access denied" in error_msg or "permission denied" in error_msg:
+                log_error(f"Failed to open serial port: Permission denied")
+                log_error("Try running with sudo or check if another application is using the port")
+            elif "device busy" in error_msg or "resource busy" in error_msg:
+                log_error(f"Failed to open serial port: Port is busy")
+                log_error("Another application may be using this serial port")
+            elif "no such file" in error_msg or "cannot find" in error_msg:
+                log_error(f"Failed to open serial port: Port not found")
+                log_error("Please check if the device is connected and the port exists")
+            else:
+                log_error(f"Failed to open serial port: {e}")
             return False
         except Exception as e:
             log_error(f"Unexpected error opening port: {e}")
@@ -429,11 +469,113 @@ def execute_playbook(port, baudrate, playbook_steps, timeout, prompt_symbol='>',
         # Track if we're in login phase (before first command prompt)
         login_phase = True
         
+        # Pre-login check: See if we're already logged in
+        log_section("Pre-Login Check")
+        log_info("Checking if already logged in to device")
+        update_progress("Checking login status")
+        
+        def check_if_logged_in():
+            """
+            Check if we're already at a command prompt (logged in).
+            Returns True if logged in, False if need to login.
+            """
+            nonlocal full_output_buffer
+            try:
+                # Send a harmless command that should work at any prompt level
+                ser.write(b'\n')
+                time.sleep(0.5)
+                
+                # Read any immediate response
+                if ser.in_waiting > 0:
+                    response = ser.read(ser.in_waiting).decode('utf-8', errors='ignore')
+                    full_output_buffer += response
+                    
+                    # Check if response contains a command prompt
+                    if detected_prompt and detected_prompt in response:
+                        return True
+                    elif prompt_symbol in response:
+                        return True
+                    elif any(prompt in response for prompt in ['#', '>', '$', '(config)']):
+                        return True
+                
+                # Try sending a simple command to test
+                ser.write(b'?\n')
+                time.sleep(1)
+                
+                if ser.in_waiting > 0:
+                    response = ser.read(ser.in_waiting).decode('utf-8', errors='ignore')
+                    full_output_buffer += response
+                    
+                    # If we get help output or command response, we're logged in
+                    if any(keyword in response.lower() for keyword in ['commands', 'help', 'available', 'syntax']):
+                        return True
+                    elif any(prompt in response for prompt in ['#', '>', '$']):
+                        return True
+                
+                return False
+                
+            except Exception as e:
+                log_debug(f"Login check failed: {e}")
+                return False
+        
+        already_logged_in = check_if_logged_in()
+        
+        if already_logged_in:
+            log_success("Device appears to be already logged in - skipping login steps")
+            login_phase = False  # Skip login phase
+            
+            # Skip login-related steps in playbook with improved detection
+            filtered_playbook_steps = []
+            login_keywords = ['login:', 'username:', 'user:', 'password:', 'admin', 'enable']
+            common_login_cmds = ['admin', 'enable', 'login', 'su']
+            in_login_sequence = True  # Start assuming we're in login sequence
+            
+            for step_type, value in playbook_steps:
+                # Check if this is a login-related step
+                is_login_step = False
+                
+                if in_login_sequence:
+                    if step_type == 'wait':
+                        # Check for login-related wait patterns
+                        wait_value_lower = value.lower().strip()
+                        if any(keyword in wait_value_lower for keyword in login_keywords):
+                            is_login_step = True
+                        elif wait_value_lower in ['prompt', '>', '#', '$']:
+                            is_login_step = True  # Prompt waits during login
+                    elif step_type == 'send':
+                        # Check for login-related send patterns
+                        send_value_lower = value.lower().strip()
+                        if any(keyword in send_value_lower for keyword in login_keywords):
+                            is_login_step = True
+                        elif send_value_lower in common_login_cmds:
+                            is_login_step = True
+                        elif len(value.strip()) < 20 and not any(cmd in value.lower() for cmd in ['show', 'config', 'display', 'get', 'set']):
+                            # Short non-command strings (likely passwords/usernames)
+                            is_login_step = True
+                        
+                        # If we see actual configuration commands, we're past login
+                        if any(cmd in value.lower() for cmd in ['show', 'config', 'display', 'get', 'set']):
+                            in_login_sequence = False
+                    elif step_type == 'command':
+                        # Any COMMAND type step means we're past login
+                        in_login_sequence = False
+                        is_login_step = False
+                
+                if is_login_step:
+                    log_debug(f"Skipping login step: {step_type.upper()} {value}")
+                else:
+                    filtered_playbook_steps.append((step_type, value))
+            
+            playbook_steps = filtered_playbook_steps
+            log_info(f"Filtered playbook to {len(playbook_steps)} steps (skipped login)")
+        else:
+            log_info("Device requires login - proceeding with full playbook")
+        
         log_section("Executing Playbook")
         
         for step_num, (step_type, value) in enumerate(playbook_steps, 1):
             try:
-                if step_type == 'command':
+                if step_type == 'command' or step_type == 'send':
                     log_info(f"Step {step_num}: Sending command '{value}'")
                     update_progress(f"Sending: {value[:20]}..." if len(value) > 20 else f"Sending: {value}")
                     last_command_sent = value
@@ -711,7 +853,7 @@ def parse_config_and_playbook(config_file, playbook_file_override=None):
                     raise ValueError(f"Malformed playbook line #{i}: '{line}'. Expected 'ACTION [value]'.")
                 
                 if action == 'SEND':
-                    playbook_steps.append(('command', value))  # value can be empty string
+                    playbook_steps.append(('send', value))  # Use 'send' for SEND commands
                 elif action == 'PAUSE':
                     try:
                         pause_time = float(value)
