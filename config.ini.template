@@ -1,0 +1,19 @@
+# Mellanox Switch Configuration Template
+# Copy this file to config.ini and customize for your environment
+
+[serial]
+port = /dev/ttyUSB0
+baudrate = 115200
+timeout = 10
+
+[playbook]
+# Path to your playbook file (supports both absolute and relative paths)
+file = playbook.txt
+
+[timing]
+command_delay = 1.0
+response_timeout = 30
+
+[logging]
+# Logging levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
+level = INFO
