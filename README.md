@@ -183,13 +183,22 @@ Shows detailed logging, command outputs, and debug information.
 python3 serial_communicator.py --config my_config.ini
 ```
 
+### Custom Playbook File
+```bash
+# Use a specific playbook file (overrides config setting)
+python3 serial_communicator.py --playbook examples/example1_no_indent.txt
+
+# Combine with verbose mode
+python3 serial_communicator.py --verbose --playbook custom_commands.txt
+```
+
 ### Multiple Playbooks
 Create different playbook files for different tasks:
 ```bash
-# Edit config.ini to point to different playbooks
-PlaybookFile = basic_setup.txt
-PlaybookFile = firmware_update.txt
-PlaybookFile = configuration_backup.txt
+# Use different playbooks for different scenarios
+python3 serial_communicator.py --playbook basic_setup.txt
+python3 serial_communicator.py --playbook firmware_update.txt  
+python3 serial_communicator.py --playbook configuration_backup.txt
 ```
 
 ## 📋 Typical Workflow
