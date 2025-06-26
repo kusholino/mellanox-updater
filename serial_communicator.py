@@ -573,9 +573,106 @@ def execute_playbook(port, baudrate, playbook_steps, timeout, prompt_symbol='>',
         
         log_section("Executing Playbook")
         
-        for step_num, (step_type, value) in enumerate(playbook_steps, 1):
+        # Track last command output for conditional logic
+        last_command_output = ""
+        
+        # Execute playbook with conditional support using step indices
+        step_idx = 0
+        while step_idx < len(playbook_steps):
+            step_num = step_idx + 1
+            step_type, value = playbook_steps[step_idx]
+            
             try:
-                if step_type == 'command' or step_type == 'send':
+                # Handle conditional commands
+                if step_type in ['if_contains', 'if_contains_i', 'if_not_contains', 'if_not_contains_i', 'if_regex']:
+                    log_info(f"Step {step_num}: Evaluating condition {step_type.upper()} '{value}'")
+                    
+                    # Find matching ENDIF
+                    endif_idx = None
+                    depth = 1
+                    for i in range(step_idx + 1, len(playbook_steps)):
+                        if playbook_steps[i][0] in ['if_contains', 'if_contains_i', 'if_not_contains', 'if_not_contains_i', 'if_regex']:
+                            depth += 1
+                        elif playbook_steps[i][0] == 'endif':
+                            depth -= 1
+                            if depth == 0:
+                                endif_idx = i
+                                break
+                    
+                    if endif_idx is None:
+                        log_error("Conditional block missing ENDIF")
+                        return False
+                    
+                    # Evaluate condition
+                    condition_met = False
+                    log_debug(f"Evaluating condition against last output: '{last_command_output[:100]}...' (length: {len(last_command_output)})")
+                    
+                    if step_type == 'if_contains':
+                        # Case-sensitive search by default
+                        condition_met = value in last_command_output
+                        log_debug(f"IF_CONTAINS '{value}' -> {condition_met}")
+                    elif step_type == 'if_contains_i':
+                        # Case-insensitive search
+                        condition_met = value.lower() in last_command_output.lower()
+                        log_debug(f"IF_CONTAINS_I '{value}' -> {condition_met}")
+                    elif step_type == 'if_not_contains':
+                        # Case-sensitive search by default
+                        condition_met = value not in last_command_output
+                        log_debug(f"IF_NOT_CONTAINS '{value}' -> {condition_met}")
+                    elif step_type == 'if_not_contains_i':
+                        # Case-insensitive search
+                        condition_met = value.lower() not in last_command_output.lower()
+                        log_debug(f"IF_NOT_CONTAINS_I '{value}' -> {condition_met}")
+                    elif step_type == 'if_regex':
+                        try:
+                            import re
+                            condition_met = bool(re.search(value, last_command_output, re.IGNORECASE))
+                            log_debug(f"IF_REGEX '{value}' -> {condition_met}")
+                        except re.error as e:
+                            log_warning(f"Invalid regex pattern '{value}': {e}")
+                            condition_met = False
+                    
+                    log_info(f"Condition result: {condition_met}")
+                    
+                    if condition_met:
+                        # Condition is true - continue to next step (execute the IF block)
+                        log_info("Condition met, executing IF block")
+                        step_idx += 1
+                    else:
+                        # Condition false - skip to ENDIF without executing the block
+                        log_info("Condition not met, skipping IF block")
+                        step_idx = endif_idx + 1
+                    
+                    # Continue to next iteration
+                    continue
+                
+                # Handle ELIF, ELSE, ENDIF when encountered during normal execution
+                elif step_type in ['elif_contains', 'elif_contains_i', 'elif_not_contains', 'elif_not_contains_i', 'elif_regex', 'else', 'endif']:
+                    if step_type == 'endif':
+                        # Just move past this ENDIF - we're done with this conditional block
+                        pass  # Let the main loop increment normally
+                    else:
+                        # This is ELIF or ELSE - we're already executing a TRUE condition, 
+                        # so skip to the matching ENDIF
+                        depth = 1
+                        endif_idx = None
+                        for i in range(step_idx + 1, len(playbook_steps)):
+                            if playbook_steps[i][0] in ['if_contains', 'if_contains_i', 'if_not_contains', 'if_not_contains_i', 'if_regex']:
+                                depth += 1
+                            elif playbook_steps[i][0] == 'endif':
+                                depth -= 1
+                                if depth == 0:
+                                    endif_idx = i
+                                    break
+                        
+                        if endif_idx is not None:
+                            step_idx = endif_idx - 1  # Set to endif_idx - 1 because main loop will increment
+                        else:
+                            log_error(f"No matching ENDIF found for {step_type.upper()} at step {step_num}")
+                            return False
+                
+                # Handle regular commands
+                elif step_type == 'command' or step_type == 'send':
                     log_info(f"Step {step_num}: Sending command '{value}'")
                     update_progress(f"Sending: {value[:20]}..." if len(value) > 20 else f"Sending: {value}")
                     last_command_sent = value
@@ -588,7 +685,6 @@ def execute_playbook(port, baudrate, playbook_steps, timeout, prompt_symbol='>',
                         log_success("Command sent successfully")
                     except Exception as e:
                         log_error(f"Failed to send command: {e}")
-                        return False
                         
                 elif step_type == 'pause':
                     log_info(f"Step {step_num}: Pausing for {value} seconds")
@@ -711,6 +807,18 @@ def execute_playbook(port, baudrate, playbook_steps, timeout, prompt_symbol='>',
                         else:
                             log_info("No output or command completed successfully")
                         print()  # Add spacing after output
+                    # For commands that were just executed, show completion status in non-verbose mode
+                    if last_command_sent and not login_phase:
+                        log_command_success(last_command_sent, step_num)
+                    
+                    # Store command output for conditional logic
+                    if captured_output.strip():
+                        last_command_output = captured_output
+                    else:
+                        log_debug("No output captured to store for conditional logic")
+                
+                # Move to next step
+                step_idx += 1
                         
             except Exception as e:
                 log_error(f"Error in step {step_num}: {e}")
@@ -849,6 +957,10 @@ def parse_config_and_playbook(config_file, playbook_file_override=None):
                     value = ""
                 elif len(parts) == 2:
                     action, value = parts[0].upper(), parts[1].strip()
+                    # Remove surrounding quotes if present
+                    if len(value) >= 2 and ((value.startswith('"') and value.endswith('"')) or 
+                                          (value.startswith("'") and value.endswith("'"))):
+                        value = value[1:-1]
                 else:
                     raise ValueError(f"Malformed playbook line #{i}: '{line}'. Expected 'ACTION [value]'.")
                 
@@ -865,6 +977,30 @@ def parse_config_and_playbook(config_file, playbook_file_override=None):
                 elif action == 'WAIT':
                     # Keep 'PROMPT' as-is for runtime resolution, don't substitute here!
                     playbook_steps.append(('wait', value))
+                elif action == 'IF_CONTAINS':
+                    playbook_steps.append(('if_contains', value))
+                elif action == 'IF_CONTAINS_I':  # Case-insensitive variant
+                    playbook_steps.append(('if_contains_i', value))
+                elif action == 'IF_NOT_CONTAINS':
+                    playbook_steps.append(('if_not_contains', value))
+                elif action == 'IF_NOT_CONTAINS_I':  # Case-insensitive variant
+                    playbook_steps.append(('if_not_contains_i', value))
+                elif action == 'IF_REGEX':
+                    playbook_steps.append(('if_regex', value))
+                elif action == 'ELIF_CONTAINS':
+                    playbook_steps.append(('elif_contains', value))
+                elif action == 'ELIF_CONTAINS_I':  # Case-insensitive variant
+                    playbook_steps.append(('elif_contains_i', value))
+                elif action == 'ELIF_NOT_CONTAINS':
+                    playbook_steps.append(('elif_not_contains', value))
+                elif action == 'ELIF_NOT_CONTAINS_I':  # Case-insensitive variant
+                    playbook_steps.append(('elif_not_contains_i', value))
+                elif action == 'ELIF_REGEX':
+                    playbook_steps.append(('elif_regex', value))
+                elif action == 'ELSE':
+                    playbook_steps.append(('else', ''))
+                elif action == 'ENDIF':
+                    playbook_steps.append(('endif', ''))
                 elif action == 'SUCCESS':
                     success_message = value # Capture the success message
                 else:
