@@ -125,10 +125,8 @@ class Logger:
             else:
                 msg = f"{self.colors.CYAN}[ACTION]{self.colors.END} {action}"
             self._write_above_progress_bar(msg)
-        else:
-            # Non-verbose: Update progress bar description to show current action
-            if self.progress_bar:
-                self.progress_bar.set_description(action)
+        # In non-verbose mode, don't show individual command execution messages
+        # The progress bar will show the current command block description
     
     def log_command_success(self, action: str, command: str = ""):
         """Log successful command/action completion."""
@@ -140,6 +138,17 @@ class Logger:
             self._write_above_progress_bar(msg)
         # In non-verbose mode: Don't show individual command success messages
         # The progress bar will show overall progress
+    
+    def log_command_skipped(self, action: str, reason: str = ""):
+        """Log that a command was skipped due to conditional logic."""
+        if self.verbose_mode:
+            if reason:
+                msg = f"{self.colors.YELLOW}[SKIP]{self.colors.END} {action}: {reason}"
+            else:
+                msg = f"{self.colors.YELLOW}[SKIP]{self.colors.END} {action}"
+            self._write_above_progress_bar(msg)
+        # In non-verbose mode, don't show individual skip messages
+        # The progress bar will show the current command block description
     
     def log_output(self, output: str):
         """Log command output."""

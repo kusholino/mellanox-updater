@@ -334,7 +334,8 @@ class ConfigManager:
                     is_login_step = False
             
             if is_login_step:
-                self.logger.log_debug(f"Skipping login step: {command.command_type.upper()} {command.command or command.expected_text}")
+                # Login step filtering - no need to log each skipped step
+                pass
             else:
                 filtered_commands.append(command)
         

@@ -6,16 +6,44 @@ This module handles the execution of playbook commands including:
 - Handling command flow and timing
 - Managing different command types (send_only, wait_for_output, etc.)
 - Progress tracking and reporting
+- Analyzing playbook structure to identify logical command blocks
 """
 
 import time
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, NamedTuple
 
 from utils.logger import Logger
 from utils.output_processor import OutputProcessor
 from core.serial_handler import SerialHandler
 from core.conditional_logic import ConditionalProcessor
 from config.config_manager import PlaybookCommand
+
+
+class CommandBlock(NamedTuple):
+    """Represents a logical command block in the playbook."""
+    name: str  # User-friendly name like "Login", "show diag", "Conditional: show license"
+    start_index: int  # Start index in commands list
+    end_index: int  # End index in commands list (inclusive)
+    is_conditional: bool  # Whether this block is inside conditional logic
+
+
+class CommandBlock:
+    """Represents a logical command block in the playbook."""
+    
+    def __init__(self, name: str, start_index: int, end_index: int, is_conditional: bool = False):
+        """
+        Initialize a command block.
+        
+        Args:
+            name: User-friendly description of the block
+            start_index: Starting index in the original command list
+            end_index: Ending index in the original command list
+            is_conditional: Whether this block is part of conditional logic
+        """
+        self.name = name
+        self.start_index = start_index
+        self.end_index = end_index
+        self.is_conditional = is_conditional
 
 
 class PlaybookExecutor:
@@ -43,6 +71,10 @@ class PlaybookExecutor:
         self.execution_times = []
         self.detected_prompt = None
         self.prompt_symbol = ">"
+        
+        # Command block analysis
+        self.command_blocks = []
+        self.current_block_index = 0
     
     def execute_playbook(self, commands: List[PlaybookCommand], 
                         detected_prompt: Optional[str], prompt_symbol: str) -> bool:
@@ -59,13 +91,19 @@ class PlaybookExecutor:
         """
         self.detected_prompt = detected_prompt
         self.prompt_symbol = prompt_symbol
+        self.commands = commands  # Store commands list for block description method
         self.total_commands = len(commands)
         self.completed_commands = 0
         self.execution_times = []
         
+        # Analyze command blocks for better progress descriptions
+        self.command_blocks = self._analyze_command_blocks(commands)
+        self.current_block_index = 0
+        
         # Display initial progress
         self.logger.log_section("Playbook Execution")
-        self.logger.show_progress(0, self.total_commands, "Starting playbook execution...")
+        initial_desc = self.command_blocks[0].name if self.command_blocks else "Starting playbook execution..."
+        self.logger.show_progress(0, self.total_commands, initial_desc)
         
         # Initialize conditional processor
         self.conditional_processor.reset()
@@ -77,17 +115,36 @@ class PlaybookExecutor:
             command = commands[command_index]
             step_num = command_index + 1
             
+            # Update current block if we've moved to a new one
+            self._update_current_block(command_index)
+            
+            # Check if we should skip this command due to conditional logic
+            # Note: Conditional commands (IF/ELIF/ELSE/ENDIF) are always processed to maintain flow control
+            if (command.command_type not in ["IF", "ELIF", "ELSE", "ENDIF"] and 
+                not self.conditional_processor.should_execute_command(command)):
+                
+                # Log that we're skipping this step
+                action_desc = self._get_action_description(command, step_num)
+                self.logger.log_command_skipped(action_desc, "conditional logic")
+                
+                # Count skipped commands toward completion for progress bar
+                self.completed_commands += 1
+                command_index += 1
+                
+                # Update progress with current block description
+                current_desc = self._get_current_block_description()
+                self.logger.show_progress(self.completed_commands, self.total_commands, current_desc)
+                continue
+            
             # Prepare action description for logging
             action_desc = self._get_action_description(command, step_num)
             
+            # Update progress to show what we're about to execute
+            current_desc = self._get_current_block_description()
+            self.logger.show_progress(self.completed_commands, self.total_commands, current_desc)
+            
             # Log the step we're executing
             self.logger.log_command_execution(action_desc, command.command, step_num)
-            
-            # Check if we should skip this command due to conditional logic
-            if not self.conditional_processor.should_execute_command(command):
-                self.logger.log_debug(f"Skipping command due to conditional logic: {command.command}")
-                command_index += 1
-                continue
             
             # Execute the command
             command_success = self._execute_single_command(command, step_num)
@@ -100,8 +157,8 @@ class PlaybookExecutor:
             self.completed_commands += 1
             command_index += 1
             
-            # Update progress
-            progress_desc = f"Completed {self.completed_commands}/{self.total_commands} commands"
+            # Update progress with current block description  
+            progress_desc = self._get_current_block_description()
             self.logger.show_progress(self.completed_commands, self.total_commands, progress_desc)
         
         # Show final results
@@ -120,32 +177,36 @@ class PlaybookExecutor:
             Action description string
         """
         if command.command_type == "send_only":
-            if self.logger.verbose_mode:
-                return f"Step {step_num}: Sending command"
+            if command.command and command.command.strip():
+                # Show the actual command being sent
+                return f"Sending command: {command.command}"
             else:
-                # Clean action description for progress bar
-                cmd_display = command.command[:30] + "..." if len(command.command) > 30 else command.command
-                return f"Sending: {cmd_display}"
+                # This is a PAUSE command
+                return f"Pause command"
         elif command.command_type == "wait_for_output":
             if command.expected_text.upper() == "PROMPT":
-                if self.logger.verbose_mode:
+                if command.command and command.command.strip():
+                    # This is a command that sends and waits for prompt
+                    return f"Sending command: {command.command}"
+                else:
+                    # This is just waiting for prompt
                     if self.detected_prompt:
-                        return f"Step {step_num}: Waiting for auto-detected prompt '{self.detected_prompt}'"
+                        return f"Waiting for auto-detected prompt '{self.detected_prompt}'"
                     else:
-                        return f"Step {step_num}: Waiting for fallback prompt '{self.prompt_symbol}'"
-                else:
-                    return "Waiting for prompt"
+                        return f"Waiting for fallback prompt '{self.prompt_symbol}'"
             else:
-                if self.logger.verbose_mode:
-                    return f"Step {step_num}: Waiting for '{command.expected_text}'"
-                else:
-                    exp_display = command.expected_text[:20] + "..." if len(command.expected_text) > 20 else command.expected_text
-                    return f"Waiting for: {exp_display}"
+                # Waiting for specific text
+                return f"Waiting for: '{command.expected_text}'"
+        elif command.command_type == "IF":
+            return f"IF: {command.command}"
+        elif command.command_type == "ELIF":
+            return f"ELIF: {command.command}"
+        elif command.command_type == "ELSE":
+            return f"ELSE: {command.command}"
+        elif command.command_type == "ENDIF":
+            return f"ENDIF: {command.command}"
         else:
-            if self.logger.verbose_mode:
-                return f"Step {step_num}: {command.command_type}"
-            else:
-                return command.command_type
+            return command.command_type
     
     def _execute_single_command(self, command: PlaybookCommand, step_num: int) -> bool:
         """
@@ -225,11 +286,8 @@ class PlaybookExecutor:
         if command.delay and command.delay > 0:
             time.sleep(command.delay)
         
-        # Log success
-        if self.logger.verbose_mode:
-            self.logger.log_command_success(f"Step {step_num}: Command sent", command.command)
-        else:
-            self.logger.log_command_success("Command sent")
+        # For send-only commands, the execution log is sufficient
+        # No need for additional success logging for simple sends
         return True
     
     def _execute_wait_for_output_command(self, command: PlaybookCommand, step_num: int) -> bool:
@@ -281,14 +339,14 @@ class PlaybookExecutor:
             # Update conditional processor with the output
             self.conditional_processor.update_last_output(output_text)
             
-            # Log command success
+            # For wait commands, only show success for non-PROMPT waits or when there's an actual command
             if command.command:
-                if self.logger.verbose_mode:
-                    self.logger.log_command_success(f"Step {step_num}: Command completed", command.command)
-                else:
-                    self.logger.log_command_success("Command completed")
-            else:
+                # This was a command that returned output - no additional success message needed
+                pass
+            elif command.expected_text != "PROMPT":
+                # Only show success for non-PROMPT specific waits
                 self.logger.log_success(f"Found expected text: '{command.expected_text}'")
+            
             return True
         else:
             # Handle timeout or failure
@@ -421,3 +479,147 @@ class PlaybookExecutor:
         except Exception as e:
             self.logger.log_error(f"Error during login sequence: {e}")
             return False
+    
+    def _analyze_command_blocks(self, commands: List[PlaybookCommand]) -> List[CommandBlock]:
+        """
+        Analyze the playbook structure to identify logical command blocks.
+        
+        Args:
+            commands: List of playbook commands
+            
+        Returns:
+            List of identified command blocks with their descriptions
+        """
+        blocks = []
+        i = 0
+        
+        while i < len(commands):
+            command = commands[i]
+            
+            # Skip ELIF, ELSE, ENDIF when processing - they're handled by their IF blocks
+            if command.command_type in ["ELIF", "ELSE", "ENDIF"]:
+                i += 1
+                continue
+            
+            # Identify command blocks
+            block_start = i
+            block_name = ""
+            is_conditional = False
+            
+            # Login sequence detection
+            if (command.command_type == "wait_for_output" and 
+                any(login_text in command.expected_text.lower() 
+                    for login_text in ['login:', 'username:'])):
+                block_name = "Logging in"
+                # Find the end of login sequence (until WAIT PROMPT)
+                while i < len(commands):
+                    if (commands[i].command_type == "wait_for_output" and 
+                        commands[i].expected_text.upper() == "PROMPT"):
+                        break
+                    i += 1
+            
+            # Command execution sequence (SEND command + WAIT PROMPT, possibly with PAUSE)
+            elif command.command_type == "send_only":
+                if command.command and command.command.strip():
+                    # Regular command
+                    cmd_text = command.command.strip()
+                    block_name = f"Executing: {cmd_text}"
+                    
+                    # Look ahead to find WAIT PROMPT or PAUSE + WAIT PROMPT
+                    j = i + 1
+                    while j < len(commands):
+                        next_cmd = commands[j]
+                        if next_cmd.command_type == "wait_for_output" and next_cmd.expected_text.upper() == "PROMPT":
+                            i = j  # Include the WAIT PROMPT in this block
+                            break
+                        elif (next_cmd.command_type == "send_only" and 
+                              not next_cmd.command):  # This is a PAUSE command
+                            i = j  # Include the PAUSE
+                            # Check if there's a WAIT PROMPT after the pause
+                            if (j + 1 < len(commands) and 
+                                commands[j + 1].command_type == "wait_for_output" and 
+                                commands[j + 1].expected_text.upper() == "PROMPT"):
+                                i = j + 1  # Include the WAIT PROMPT after pause
+                            break
+                        else:
+                            break
+                else:
+                    # This is a PAUSE command (empty SEND)
+                    block_name = "Pausing execution"
+            
+            # Standalone PAUSE command
+            elif command.command_type == "pause":
+                block_name = "Pausing execution"
+            
+            # SUCCESS command
+            elif command.command_type == "SUCCESS":
+                block_name = "Completing playbook"
+            
+            # IF conditional start
+            elif command.command_type in ["IF", "IF_CONTAINS", "IF_NOT_CONTAINS"]:
+                is_conditional = True
+                
+                # Look for the first SEND command inside this IF block
+                main_command = None
+                j = i + 1
+                depth = 1
+                
+                while j < len(commands) and depth > 0:
+                    if commands[j].command_type in ["IF", "IF_CONTAINS", "IF_NOT_CONTAINS"]:
+                        depth += 1
+                    elif commands[j].command_type == "ENDIF":
+                        depth -= 1
+                    elif (depth == 1 and commands[j].command_type == "send_only" and 
+                          commands[j].command and commands[j].command.strip()):
+                        main_command = commands[j].command.strip()
+                        break
+                    j += 1
+                
+                # Set block name
+                if main_command:
+                    block_name = f"Conditional: {main_command}"
+                else:
+                    block_name = "Processing conditional logic"
+                
+                # Find the end of this conditional block (the matching ENDIF)
+                depth = 1
+                j = i + 1
+                while j < len(commands) and depth > 0:
+                    if commands[j].command_type in ["IF", "IF_CONTAINS", "IF_NOT_CONTAINS"]:
+                        depth += 1
+                    elif commands[j].command_type == "ENDIF":
+                        depth -= 1
+                    j += 1
+                
+                # Set i to the ENDIF position
+                i = j - 1
+            
+            else:
+                # Default case
+                block_name = "Processing command"
+            
+            # Create the block
+            if block_name:
+                blocks.append(CommandBlock(
+                    name=block_name,
+                    start_index=block_start,
+                    end_index=i,
+                    is_conditional=is_conditional
+                ))
+            
+            i += 1
+        
+        return blocks
+    
+    def _update_current_block(self, command_index: int):
+        """Update the current block index based on command position."""
+        for i, block in enumerate(self.command_blocks):
+            if block.start_index <= command_index <= block.end_index:
+                self.current_block_index = i
+                break
+    
+    def _get_current_block_description(self) -> str:
+        """Get the description of the current command block."""
+        if (self.current_block_index < len(self.command_blocks)):
+            return self.command_blocks[self.current_block_index].name
+        return "Processing commands"
