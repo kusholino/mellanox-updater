@@ -15,6 +15,63 @@ SerialLink connects to devices via serial port and automatically:
 
 Think of it as scripting for serial console sessions.
 
+## Features
+
+### Core Automation
+- **Smart Device Detection**: Automatically detects and connects to serial devices
+- **Intelligent Prompt Recognition**: Recognizes login prompts, command prompts, and custom patterns
+- **Automatic Pagination Handling**: Deals with "More" prompts and paged output automatically
+- **Command Sequencing**: Executes commands in precise order with proper timing
+- **Response Validation**: Waits for expected responses before proceeding
+
+### Advanced Logic
+- **Conditional Execution**: IF_CONTAINS and IF_NOT_CONTAINS statements for decision making
+- **Nested Conditionals**: Support for complex, multi-level conditional logic
+- **Regular Expression Matching**: Pattern matching for flexible response detection
+- **Dynamic Command Selection**: Choose different commands based on device responses
+- **Error Recovery**: Intelligent handling of unexpected responses and timeouts
+
+### Device Support
+- **Multi-Vendor Compatibility**: Works with Cisco, Juniper, Linux servers, and more
+- **Flexible Serial Settings**: Configurable baud rates, timeouts, and connection parameters
+- **Multiple Device Management**: Handle different device types with separate configurations
+- **Cross-Platform**: Runs on Linux, macOS, and Windows
+
+### User Experience
+- **Zero-Configuration Setup**: Single command setup with automatic environment creation
+- **Smart Installation**: Only installs missing components, preserves existing setup
+- **Comprehensive Validation**: Built-in testing and verification of all components
+- **Rich Progress Feedback**: Real-time status updates and colored output
+- **Verbose Debugging**: Detailed logging for troubleshooting and development
+
+### Playbook System
+- **Simple Syntax**: Easy-to-read command format that anyone can understand
+- **Comment Support**: Document your playbooks with inline comments
+- **Flexible Timing**: PAUSE commands for devices that need processing time
+- **Success Markers**: Clear completion indicators and custom success messages
+- **Modular Design**: Reusable playbook components and templates
+
+### Configuration Management
+- **Template System**: Pre-configured templates for common scenarios
+- **Override Capabilities**: Command-line overrides for any configuration setting
+- **Secure Storage**: Encrypted password storage with proper file permissions
+- **Environment Variables**: Support for environment-based configuration
+- **Multiple Profiles**: Different configurations for different environments
+
+### Output Processing
+- **Intelligent Buffering**: Handles large command outputs efficiently
+- **Automatic Cleanup**: Strips control characters and formatting for clean logs
+- **File Logging**: Optional output capture to files for analysis
+- **Real-time Display**: Live output streaming with proper formatting
+- **Search and Filter**: Built-in tools for finding specific information in outputs
+
+### Development Features
+- **Modular Architecture**: Clean separation of concerns for easy extension
+- **Plugin System**: Extensible design for custom device types and commands
+- **Test Framework**: Built-in testing tools for validating playbooks
+- **Error Reporting**: Detailed error messages with specific error codes
+- **Development Mode**: Special tools and helpers for playbook development
+
 ## Quick Start
 
 Get up and running in under 2 minutes:
