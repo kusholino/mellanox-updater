@@ -18,59 +18,52 @@ Think of it as scripting for serial console sessions.
 ## Features
 
 ### Core Automation
-- **Smart Device Detection**: Automatically detects and connects to serial devices
-- **Intelligent Prompt Recognition**: Recognizes login prompts, command prompts, and custom patterns
-- **Automatic Pagination Handling**: Deals with "More" prompts and paged output automatically
-- **Command Sequencing**: Executes commands in precise order with proper timing
-- **Response Validation**: Waits for expected responses before proceeding
+- **Serial Port Management**: Automatically detects available serial ports and manages connections
+- **Smart Prompt Detection**: Recognizes common device prompts (>, #, hostname>, user@host#)
+- **Automatic Pagination Handling**: Responds to "More" prompts and paged output automatically
+- **Command Sequencing**: Executes commands in precise order with configurable timing
+- **Login State Detection**: Checks if already logged in and skips unnecessary login steps
 
-### Advanced Logic
-- **Conditional Execution**: IF_CONTAINS and IF_NOT_CONTAINS statements for decision making
-- **Nested Conditionals**: Support for complex, multi-level conditional logic
-- **Regular Expression Matching**: Pattern matching for flexible response detection
-- **Dynamic Command Selection**: Choose different commands based on device responses
-- **Error Recovery**: Intelligent handling of unexpected responses and timeouts
+### Conditional Logic
+- **IF_CONTAINS/IF_NOT_CONTAINS**: Make decisions based on command output
+- **Case-Sensitive and Case-Insensitive**: Both `IF_CONTAINS` and `IF_CONTAINS_I` variants
+- **Regular Expression Support**: `IF_REGEX` and `IF_NOT_REGEX` for pattern matching
+- **ELIF and ELSE**: Complete conditional logic with multiple branches
+- **Nested Conditionals**: Support for complex, multi-level conditional blocks
+
+### Playbook Commands
+- **SEND**: Send a command to the device
+- **WAIT**: Wait for specific text in the output
+- **PAUSE**: Wait for a specific number of seconds
+- **IF_CONTAINS**: Execute commands only if output contains text
+- **IF_NOT_CONTAINS**: Execute commands only if output doesn't contain text
+- **SUCCESS**: Set a custom completion message
+- **Comments**: Lines starting with # are ignored
 
 ### Device Support
-- **Multi-Vendor Compatibility**: Works with Cisco, Juniper, Linux servers, and more
+- **Multi-Vendor Compatibility**: Works with any device that uses serial console
 - **Flexible Serial Settings**: Configurable baud rates, timeouts, and connection parameters
-- **Multiple Device Management**: Handle different device types with separate configurations
 - **Cross-Platform**: Runs on Linux, macOS, and Windows
+- **Smart Initialization**: Handles device connection and initial output processing
 
 ### User Experience
 - **Zero-Configuration Setup**: Single command setup with automatic environment creation
 - **Smart Installation**: Only installs missing components, preserves existing setup
 - **Comprehensive Validation**: Built-in testing and verification of all components
-- **Rich Progress Feedback**: Real-time status updates and colored output
-- **Verbose Debugging**: Detailed logging for troubleshooting and development
-
-### Playbook System
-- **Simple Syntax**: Easy-to-read command format that anyone can understand
-- **Comment Support**: Document your playbooks with inline comments
-- **Flexible Timing**: PAUSE commands for devices that need processing time
-- **Success Markers**: Clear completion indicators and custom success messages
-- **Modular Design**: Reusable playbook components and templates
+- **Rich Progress Feedback**: Real-time status updates with colored output
+- **Verbose Mode**: Detailed logging for troubleshooting and development
 
 ### Configuration Management
 - **Template System**: Pre-configured templates for common scenarios
-- **Override Capabilities**: Command-line overrides for any configuration setting
-- **Secure Storage**: Encrypted password storage with proper file permissions
-- **Environment Variables**: Support for environment-based configuration
+- **Command-Line Overrides**: Override any configuration setting from command line
 - **Multiple Profiles**: Different configurations for different environments
+- **Environment Detection**: Automatically handles different Python environments
 
 ### Output Processing
 - **Intelligent Buffering**: Handles large command outputs efficiently
-- **Automatic Cleanup**: Strips control characters and formatting for clean logs
-- **File Logging**: Optional output capture to files for analysis
+- **Automatic Cleanup**: Strips pagination prompts and control characters
 - **Real-time Display**: Live output streaming with proper formatting
-- **Search and Filter**: Built-in tools for finding specific information in outputs
-
-### Development Features
-- **Modular Architecture**: Clean separation of concerns for easy extension
-- **Plugin System**: Extensible design for custom device types and commands
-- **Test Framework**: Built-in testing tools for validating playbooks
-- **Error Reporting**: Detailed error messages with specific error codes
-- **Development Mode**: Special tools and helpers for playbook development
+- **Output Capture**: Full output available for conditional logic evaluation
 
 ## Quick Start
 
@@ -102,20 +95,30 @@ ls /dev/tty*
 ### 2. Set Your Connection Details
 Edit `config.ini` with your device info:
 ```ini
+[serial]
 port = /dev/ttyUSB0
 baudrate = 115200
-username = admin
-password = your_password
+timeout = 10
+
+[playbook]
+file = playbook.txt
+
+[timing]
+command_delay = 1.0
+response_timeout = 30
 ```
 
 ### 3. Create a Playbook
 Write your commands in `playbook.txt`:
 ```
+# Login to device
 WAIT login:
 SEND admin
 WAIT Password:
 SEND your_password
 WAIT PROMPT
+
+# Run commands
 SEND show version
 WAIT PROMPT
 SUCCESS Done!
@@ -132,25 +135,37 @@ Watch as SerialLink connects to your device and runs all commands automatically.
 
 ### Router Configuration Backup
 ```
+# Login sequence
 WAIT login:
 SEND admin
 WAIT Password:
 SEND admin_password
 WAIT PROMPT
+
+# Get configuration
 SEND show running-config
-PAUSE 10
+PAUSE 5
 WAIT PROMPT
 SEND show startup-config
-PAUSE 10
+PAUSE 5
 WAIT PROMPT
 SUCCESS Backup completed
 ```
 
 ### Conditional Logic Based on Device Type
 ```
+# Login first
+WAIT login:
+SEND admin
+WAIT Password:
+SEND admin_password
+WAIT PROMPT
+
+# Check device type
 SEND show version
 WAIT PROMPT
 
+# Run device-specific commands
 IF_CONTAINS "Cisco"
     SEND show ip interface brief
     WAIT PROMPT
@@ -166,11 +181,14 @@ SUCCESS Device check completed
 
 ### Server Health Check
 ```
+# Login to server
 WAIT login:
 SEND root
 WAIT Password:
 SEND root_password
 WAIT PROMPT
+
+# Check system health
 SEND uptime
 WAIT PROMPT
 SEND df -h
@@ -189,30 +207,33 @@ SUCCESS Health check done
 | `PAUSE <seconds>` | Wait for time | `PAUSE 5` |
 | `IF_CONTAINS "<text>"` | Conditional execution | `IF_CONTAINS "Cisco"` |
 | `IF_NOT_CONTAINS "<text>"` | Negative condition | `IF_NOT_CONTAINS "Error"` |
+| `IF_CONTAINS_I "<text>"` | Case-insensitive condition | `IF_CONTAINS_I "cisco"` |
+| `IF_REGEX "<pattern>"` | Regex pattern matching | `IF_REGEX "Version [0-9]+"` |
+| `ELIF_CONTAINS "<text>"` | Else-if condition | `ELIF_CONTAINS "Juniper"` |
+| `ELSE` | Default condition | `ELSE` |
 | `ENDIF` | End conditional block | `ENDIF` |
 | `SUCCESS <message>` | Mark completion | `SUCCESS All done!` |
+| `# comment` | Add comments | `# This is a comment` |
 
 ## Configuration Options
 
 Edit `config.ini` to customize behavior:
 
 ```ini
-[DEFAULT]
+[serial]
 port = /dev/ttyUSB0          # Your serial port
 baudrate = 115200            # Communication speed
-username = admin             # Login username
-password = password          # Login password
-playbook_file = playbook.txt # Which playbook to run
-prompt_symbol = >            # What your prompt looks like
-timeout = 10                 # How long to wait for responses
+timeout = 10                 # Connection timeout
 
-[LOGGING]
-verbose = false              # Show detailed output
-log_file =                   # Save log to file (optional)
+[playbook]
+file = playbook.txt          # Which playbook to run
 
-[ADVANCED]
-initialization_delay = 2     # Wait after connecting
-command_delay = 1           # Wait between commands
+[timing]
+command_delay = 1.0          # Wait between commands
+response_timeout = 30        # How long to wait for responses
+
+[logging]
+level = INFO                 # Logging level (DEBUG, INFO, WARNING, ERROR)
 ```
 
 ## Command Line Options
@@ -221,8 +242,11 @@ command_delay = 1           # Wait between commands
 # Basic usage
 ./seriallink
 
-# With custom settings
-./seriallink --username admin --password secret --verbose
+# With verbose output
+./seriallink --verbose
+
+# Override settings
+./seriallink --baudrate 9600 --username admin --password secret
 
 # Use different config file
 ./seriallink --config my_device.ini
@@ -232,6 +256,9 @@ command_delay = 1           # Wait between commands
 
 # Override prompt symbol
 ./seriallink --prompt-symbol "#"
+
+# Disable features
+./seriallink --no-color --no-pagination
 ```
 
 ## Troubleshooting
@@ -262,14 +289,16 @@ ls /dev/tty*
 
 **Commands not working:**
 - Check for typos in WAIT statements
-- Make sure prompt_symbol matches your device
-- Add PAUSE commands if device is slow
-- Use `--verbose` to see what's happening
+- Make sure your device prompt is properly detected
+- Add PAUSE commands if device is slow to respond
+- Use `--verbose` to see detailed communication
+- Check that expected text exactly matches device output
 
 **Conditional logic not working:**
-- Text matching is case-sensitive
+- Text matching is case-sensitive (use `IF_CONTAINS_I` for case-insensitive)
 - Use exact text from device output
 - Check for extra spaces or characters
+- Try `IF_REGEX` for complex pattern matching
 
 ### Setup Problems
 
@@ -316,18 +345,48 @@ Create separate config files for each device:
 ```
 
 ### Complex Conditionals
-Chain multiple conditions:
+Chain multiple conditions with ELIF and ELSE:
 ```
+SEND show version
+WAIT PROMPT
+
 IF_CONTAINS "Version 15.2"
-    IF_CONTAINS "Advanced IP Services"
-        SEND show license
-        WAIT PROMPT
-    ENDIF
+    SEND show license
+    WAIT PROMPT
+ELIF_CONTAINS "Version 16.0"
+    SEND show platform
+    WAIT PROMPT
+ELSE
+    SEND show inventory
+    WAIT PROMPT
+ENDIF
+```
+
+### Case-Insensitive Matching
+```
+SEND show version
+WAIT PROMPT
+
+IF_CONTAINS_I "cisco"
+    # Matches "Cisco", "CISCO", "cisco", etc.
+    SEND show ip route
+    WAIT PROMPT
+ENDIF
+```
+
+### Regular Expression Matching
+```
+SEND show version
+WAIT PROMPT
+
+IF_REGEX "Version [0-9]+\.[0-9]+"
+    SEND show running-config
+    WAIT PROMPT
 ENDIF
 ```
 
 ### Output Processing
-Save command output to files by using verbose mode:
+Save command output by using verbose mode and redirecting output:
 ```bash
 ./seriallink --verbose > device_output.log 2>&1
 ```
@@ -363,10 +422,11 @@ Check the `examples/` directory for ready-to-use playbooks:
 ## Tips for Success
 
 1. **Start Simple**: Begin with basic login and one command
-2. **Use Verbose Mode**: Always use `--verbose` when testing
-3. **Check Your Prompts**: Make sure prompt_symbol matches your device
-4. **Add Delays**: Some devices need time between commands
+2. **Use Verbose Mode**: Always use `--verbose` when testing new playbooks
+3. **Check Your Output**: Device output must exactly match your WAIT conditions
+4. **Add Delays**: Some devices need time between commands - use PAUSE
 5. **Test Incrementally**: Add commands one at a time to playbooks
-6. **Save Configurations**: Keep separate config files for different devices
+6. **Use Comments**: Document your playbooks with # comments
+7. **Check Conditionals**: Use exact text matching or try case-insensitive variants
 
 SerialLink makes serial device automation straightforward. No complex scripting languages, no intricate setup procedures - just simple commands that work.
