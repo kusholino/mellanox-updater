@@ -1,688 +1,274 @@
 # Mellanox Device Updater
 
-A professional Python tool for automated serial communication with Mellanox switches and network devices. **Now with a modern modular architecture** for improved maintainability and extensibility.
+A professional Python tool for automated serial communication with Mellanox switches and network devices. Features a modern modular architecture, intelligent command block progress tracking, and comprehensive conditional logic support.
 
-Features robust error handling, automatic pagination, dynamic prompt detection, flexible playbook management, and **powerful conditional logic** for intelligent device automation.
+## 🚀 Key Features
 
-## 🏗️ **NEW: Modular Architecture**
-The tool has been refactored into a clean, modular structure with dedicated packages for configuration, core functionality, and utilities. This makes the code easier to maintain, debug, and extend while preserving 100% compatibility with existing configurations and playbooks.
+- **🏗️ Modular Architecture**: Clean, maintainable codebase with dedicated modules
+- **📊 Smart Progress Tracking**: User-friendly progress bars showing logical command blocks
+- **🔄 Conditional Logic**: Advanced IF/ELIF/ELSE/ENDIF support with multiple conditions
+- **🔧 Automatic Login Detection**: Skips login steps if already authenticated
+- **📱 Interactive Port Selection**: Automatic serial port detection and selection
+- **🎨 Rich Output Formatting**: Colored output with verbose/non-verbose modes
+- **⚡ Robust Error Handling**: Comprehensive error detection and recovery
+- **📄 Flexible Configuration**: INI-based configuration with command-line overrides
 
-### Project Structure
-```
-mellanox-updater/
-├── main.py                     # New modular entry point
-├── serial_communicator.py      # Original script (legacy)
-├── requirements.txt            # Python dependencies
-├── config.ini                  # Configuration file
-├── config/                     # Configuration management
-│   ├── __init__.py
-│   └── config_manager.py       # Config and playbook parsing
-├── core/                       # Core functionality
-│   ├── __init__.py
-│   ├── conditional_logic.py    # IF/ELIF/ELSE/ENDIF processing
-│   ├── playbook_executor.py    # Command execution logic
-│   ├── prompt_detector.py      # Device prompt detection
-│   └── serial_handler.py       # Serial communication
-└── utils/                      # Utility modules
-    ├── __init__.py
-    ├── logger.py               # Logging and output formatting
-    ├── output_processor.py     # Output cleaning and processing
-    └── pagination.py           # Pagination handling
-```
-
-## ✨ **Conditional Logic Support**
-Execute different commands based on device output! Automatically adapt to different switch models, software versions, or configurations:
-
-```
-SEND show version
-WAIT PROMPT
-IF_CONTAINS "SN2700"
-    SEND show interfaces ethernet brief
-    WAIT PROMPT
-ELSE
-    SEND show interfaces status
-    WAIT PROMPT  
-ENDIF
-```
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Python 3.6+
-- Serial device connected via USB/COM port
+## 📋 Quick Start
 
 ### Installation
-1. Clone or download this repository
-2. Install required packages:
-```bash
-pip install -r requirements.txt
-# or manually: pip install pyserial tqdm
-```
 
-### Usage
+1. **Clone the repository:**
+   ```bash
+   git clone <repository-url>
+   cd mellanox-updater
+   ```
 
-#### **NEW: Modular Version (Recommended)**
-```bash
-# Run with default configuration
-python main.py
+2. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-# Specify port and credentials  
-python main.py -p COM3 -u admin --password secret
-
-# Enable verbose logging
-python main.py --verbose
-
-# Use custom configuration
-python main.py -c custom_config.ini
-```
-
-#### **Legacy Version (Still Available)**
+3. **Configure your device:**
+   ```bash
+   cp config.ini.template config.ini
+   # Edit config.ini with your device settings
+   ```
 
 ### Basic Usage
-1. **Configure your device settings** in `config.ini`
-2. **Write your commands** in `playbook.txt` (no indentation required!)
-3. **Run the tool**:
+
+**Run with default configuration:**
 ```bash
-# With progress bar (recommended for most users)
-python3 serial_communicator.py
-
-# With detailed logging (for troubleshooting)
-python3 serial_communicator.py --verbose
+python main.py
 ```
 
-## 📝 Creating Playbooks
+**Run with credentials:**
+```bash
+python main.py -u admin --password your_password
+```
 
-Write your device commands in `playbook.txt` with **zero indentation required**:
+**Run in verbose mode:**
+```bash
+python main.py --verbose
+```
+
+**Use custom configuration:**
+```bash
+python main.py -c custom_config.ini --verbose
+```
+
+## 📖 Command Line Options
 
 ```
-# Simple example - no spaces needed!
+Options:
+  -h, --help                    Show help message
+  -b, --baudrate RATE          Baud rate (default: 115200)
+  -c, --config FILE            Configuration file (default: config.ini)
+  -p, --playbook FILE          Playbook file (overrides config setting)
+  -v, --verbose                Enable verbose logging
+  -u, --username USER          Username for device login
+  --password PASS              Password for device login
+  --no-color                   Disable colored output
+  --no-pagination              Disable automatic pagination handling
+  --prompt-symbol SYMBOL       Override prompt symbol (default: >)
+  --legacy-mode                Run in legacy mode
+```
+
+## 🎯 Progress Bar Examples
+
+The tool displays user-friendly progress descriptions showing what logical operation is being performed:
+
+**Non-verbose mode:**
+```
+Logging in:  29%|████████▊                        | 4/14 [00:02<00:05]
+Executing: show diag:  43%|█████████████▎         | 6/14 [00:03<00:04]  
+Conditional: show license:  64%|████████████████▋  | 9/14 [00:05<00:02]
+Executing: show configuration:  93%|███████████▌  | 13/14 [00:06<00:00]
+```
+
+**Verbose mode:**
+Shows the same progress descriptions plus detailed logging above the progress bar.
+
+## 📝 Playbook Format
+
+Create playbooks using simple, intuitive commands:
+
+```plaintext
+# Login sequence
 WAIT login:
 SEND admin
 WAIT Password:
-SEND mypassword
+SEND your_password
 WAIT PROMPT
-SEND show version
-SEND configure terminal
-SEND hostname new-switch-name
-SEND exit
-WAIT PROMPT
-SEND exit
-SUCCESS Configuration completed!
-```
 
-### Supported Commands
-
-#### Basic Commands
-- **`WAIT text`** - Wait for specific text to appear
-- **`WAIT PROMPT`** - Wait for command prompt (auto-detected)
-- **`SEND command`** - Send a command to the device
-- **`PAUSE seconds`** - Wait for a fixed number of seconds
-- **`SUCCESS message`** - Custom success message when completed
-
-#### **NEW: Conditional Logic Commands**
-Execute commands based on the output of previous commands:
-
-**Case-Sensitive Matching:**
-- **`IF_CONTAINS "text"`** - Execute block if output contains exact text
-- **`IF_NOT_CONTAINS "text"`** - Execute block if output does NOT contain exact text
-- **`ELIF_CONTAINS "text"`** - Alternative condition (case-sensitive)
-- **`ELIF_NOT_CONTAINS "text"`** - Alternative condition (case-sensitive)
-
-**Case-Insensitive Matching:**
-- **`IF_CONTAINS_I "text"`** - Execute block if output contains text (ignoring case)
-- **`IF_NOT_CONTAINS_I "text"`** - Execute block if output does NOT contain text (ignoring case)
-- **`ELIF_CONTAINS_I "text"`** - Alternative condition (case-insensitive)
-- **`ELIF_NOT_CONTAINS_I "text"`** - Alternative condition (case-insensitive)
-
-**Advanced Pattern Matching:**
-- **`IF_REGEX "pattern"`** - Execute block if regex pattern matches
-- **`ELIF_REGEX "pattern"`** - Alternative regex condition
-
-**Control Flow:**
-- **`ELSE`** - Execute if no conditions matched
-- **`ENDIF`** - End conditional block (required)
-
-### Example Playbooks
-
-**Basic Configuration:**
-```
-WAIT login:
-SEND admin
-WAIT Password:
-SEND password123
-WAIT PROMPT
-SEND configure terminal
-SEND hostname lab-switch-01
-SEND interface ethernet 1/1
-SEND description "Server Connection"
-SEND no shutdown
-SEND exit
-SEND exit
-WAIT PROMPT
-SEND write memory
-SUCCESS Switch configured successfully!
-```
-
-**Smart Device Detection with Conditionals:**
-```
-# Check device model and adapt commands accordingly
-WAIT login:
-SEND admin
-WAIT Password:
-SEND password123
-WAIT PROMPT
+# Execute commands
 SEND show version
 WAIT PROMPT
 
-# Different commands for different switch models
-IF_CONTAINS "SN2700"
-    SEND show interfaces ethernet brief
+# Conditional logic
+IF_CONTAINS "specific_version"
+    SEND show license
     WAIT PROMPT
-    SEND show system temperature
+ENDIF
+
+# Pause and final commands
+SEND show configuration
+PAUSE 10
+WAIT PROMPT
+
+SUCCESS Playbook completed successfully!
+```
+
+## 🔄 Conditional Logic
+
+The tool supports sophisticated conditional logic:
+
+### Available Conditions
+- `IF_CONTAINS "text"` - Check if output contains specific text
+- `IF_NOT_CONTAINS "text"` - Check if output does NOT contain text
+- `IF "text"` - Alias for IF_CONTAINS
+- `ELIF_CONTAINS "text"` - Else-if with contains check
+- `ELIF_NOT_CONTAINS "text"` - Else-if with not-contains check
+- `ELSE` - Default case
+- `ENDIF` - End conditional block
+
+### Example Conditional Playbook
+```plaintext
+SEND show version
+WAIT PROMPT
+
+IF_CONTAINS "Version 3.8"
+    SEND enable_feature_v38
     WAIT PROMPT
-ELIF_CONTAINS "SN3700"
-    SEND show interfaces status
-    WAIT PROMPT
-    SEND show environment power
+ELIF_CONTAINS "Version 3.7"
+    SEND enable_feature_v37
     WAIT PROMPT
 ELSE
-    SEND show interfaces summary
+    SEND show help
     WAIT PROMPT
 ENDIF
-
-SUCCESS Device configuration completed based on model!
-```
-
-**Feature Detection and Configuration:**
-```
-WAIT PROMPT
-SEND show features
-WAIT PROMPT
-
-# Only configure BGP if it's enabled
-IF_NOT_CONTAINS "BGP: disabled"
-    SEND configure terminal
-    SEND router bgp 65001
-    SEND neighbor 192.168.1.1 remote-as 65002
-    SEND exit
-    SEND exit
-    WAIT PROMPT
-ENDIF
-
-# Check if VLAN feature is available
-IF_CONTAINS_I "vlan"
-    SEND show vlan brief
-    WAIT PROMPT
-ENDIF
-
-SUCCESS Configuration applied based on available features!
-```
-
-**Information Gathering:**
-```
-WAIT login:
-SEND admin
-WAIT Password:
-SEND password123
-WAIT PROMPT
-SEND show version
-PAUSE 2
-WAIT PROMPT
-SEND show interfaces
-PAUSE 2
-WAIT PROMPT
-SEND show configuration
-PAUSE 5
-WAIT PROMPT
-SEND exit
-SUCCESS Information collected successfully!
 ```
 
 ## ⚙️ Configuration
 
-Edit `config.ini` to match your setup:
-
+### config.ini Structure
 ```ini
-[Serial]
-BaudRate = 115200
-Timeout = 60
-PromptSymbol = >
+[DEFAULT]
+port = /dev/ttyUSB0
+baudrate = 115200
+username = admin
+password = your_password
+playbook_file = playbook.txt
+prompt_symbol = >
+success_message = Configuration updated successfully!
 
-[Pagination]
-Enabled = true
-ResponseDelay = 0.1
-
-[Playbook]
-PlaybookFile = playbook.txt
+[logging]
+verbose = false
+use_colors = true
+use_pagination = true
 ```
 
-### Configuration Options
+### Playbook Commands Reference
 
-**Serial Settings:**
-- **BaudRate**: Serial communication speed (usually 115200)
-- **Timeout**: Maximum wait time for each command (seconds)
-- **PromptSymbol**: Fallback prompt if auto-detection fails
+| Command | Description | Example |
+|---------|-------------|---------|
+| `SEND` | Send text to device | `SEND show version` |
+| `WAIT` | Wait for specific text | `WAIT PROMPT` |
+| `PAUSE` | Pause execution | `PAUSE 5` |
+| `IF_CONTAINS` | Conditional execution | `IF_CONTAINS "text"` |
+| `IF_NOT_CONTAINS` | Negative conditional | `IF_NOT_CONTAINS "error"` |
+| `ELIF_CONTAINS` | Else-if condition | `ELIF_CONTAINS "other"` |
+| `ELSE` | Default case | `ELSE` |
+| `ENDIF` | End conditional | `ENDIF` |
+| `SUCCESS` | Success message | `SUCCESS Done!` |
 
-**Pagination Settings:**
-- **Enabled**: Automatically handle "Press any key to continue" prompts
-- **ResponseDelay**: Delay after responding to pagination (seconds)
+## 🏗️ Architecture
 
-**Playbook Settings:**
-- **PlaybookFile**: Path to your playbook file (relative or absolute)
-
-## 🎯 Key Features
-
-### ✅ **Zero Indentation Required**
-Write commands with any formatting you prefer:
-```
-WAIT login:
-SEND admin
-    WAIT Password:
-        SEND password123
-WAIT PROMPT
-SEND show version
-```
-
-### ✅ **Automatic Pagination Handling**
-Automatically responds to:
-- `--More--` prompts
-- `Press any key to continue`
-- `Continue? [y/n]`
-- And many more pagination patterns
-
-### ✅ **Smart Prompt Detection**
-Automatically detects device prompts like:
-- `switch01>`
-- `admin@switch01#`
-- `switch01(config)#`
-
-### ✅ **Professional Logging**
-- **Progress bar mode**: Clean output for normal use
-- **Verbose mode**: Detailed logging for troubleshooting
-- **Color-coded messages**: Easy to read status updates
-
-### ✅ **Robust Error Handling**
-- Serial communication errors
-- Timeout handling
-- Invalid command detection
-- File not found errors
-
-### ✅ **Smart Pre-Login Detection**
-- Automatically detects if already logged in
-- Intelligently skips all login-related steps when already authenticated
-- Preserves actual commands and configuration steps
-- Handles complex login sequences with multiple prompts and credentials
-
-### ✅ **Serial Port Protection**
-- Detects if port is already in use
-- Prevents conflicts with other applications
-- Clear error messages for port access issues
-
-### ✅ **Conditional Logic Support**
-- **Smart decision making**: Execute different commands based on device output
-- **Device model detection**: Automatic adaptation to different hardware
-- **Feature detection**: Only run commands if features are available
-- **Case-sensitive and case-insensitive text matching**
-- **Regular expression pattern matching** for advanced conditions
-- **Nested conditional blocks** with IF/ELIF/ELSE/ENDIF
-- **Dynamic workflows** that adapt to device state
-
-## 🔧 Usage Examples
-
-### Standard Operation
-```bash
-python3 serial_communicator.py
-```
-Shows a clean progress bar and only critical information.
-
-### Troubleshooting Mode
-```bash
-python3 serial_communicator.py --verbose
-```
-Shows detailed logging, command outputs, and debug information.
-
-### Custom Playbook File
-```bash
-python3 serial_communicator.py --playbook my_custom_playbook.txt
-```
-
-### Using Conditional Examples
-```bash
-# Run the comprehensive conditional logic example
-python3 serial_communicator.py --playbook examples/conditional_playbook_example.txt
-```
-
-## 🎯 **Conditional Logic Guide**
-
-### Case Sensitivity Rules
-- **Default behavior**: All text matching is **case-sensitive**
-- **Case-insensitive**: Use commands ending with `_I` (e.g., `IF_CONTAINS_I`)
-- **Regular expressions**: Case-insensitive by default
-
-### Basic Conditional Structure
-```
-SEND some command
-WAIT PROMPT
-IF_CONTAINS "expected text"
-    SEND conditional command 1
-    WAIT PROMPT
-    SEND conditional command 2
-    WAIT PROMPT
-ENDIF
-```
-
-### Advanced Conditional Structure
-```
-SEND show device info
-WAIT PROMPT
-
-IF_CONTAINS "Model: SN2700"
-    SEND show interfaces ethernet brief
-    WAIT PROMPT
-ELIF_CONTAINS "Model: SN3700"
-    SEND show interfaces status
-    WAIT PROMPT
-ELIF_REGEX "Model: SN[0-9]{4}"
-    SEND show interfaces summary
-    WAIT PROMPT
-ELSE
-    SEND show system
-    WAIT PROMPT
-ENDIF
-```
-
-### Real-World Examples
-
-#### Device Model Detection
-```
-SEND show version
-WAIT PROMPT
-IF_CONTAINS "SN2700"
-    # Commands specific to SN2700
-    SEND show interfaces ethernet 1/1-1/32
-    WAIT PROMPT
-ELIF_CONTAINS "SN3700"
-    # Commands specific to SN3700
-    SEND show interfaces ethernet 1/1-1/64
-    WAIT PROMPT
-ENDIF
-```
-
-#### Software Version Adaptation
-```
-SEND show version
-WAIT PROMPT
-IF_REGEX "Version.*3\.[0-9]+"
-    # Commands for version 3.x
-    SEND show system resources
-    WAIT PROMPT
-ELIF_REGEX "Version.*4\.[0-9]+"
-    # Commands for version 4.x
-    SEND show platform resources
-    WAIT PROMPT
-ENDIF
-```
-
-#### Feature Availability Check
-```
-SEND show features
-WAIT PROMPT
-IF_NOT_CONTAINS_I "bgp.*disabled"
-    SEND show ip bgp summary
-    WAIT PROMPT
-    IF_CONTAINS "neighbors"
-        SEND show ip bgp neighbors
-        WAIT PROMPT
-    ENDIF
-ENDIF
-```
-python3 serial_communicator.py --config my_config.ini
-```
-
-### Custom Playbook File
-```bash
-# Use a specific playbook file (overrides config setting)
-python3 serial_communicator.py --playbook examples/example1_no_indent.txt
-
-# Combine with verbose mode
-python3 serial_communicator.py --verbose --playbook custom_commands.txt
-```
-
-### Multiple Playbooks
-Create different playbook files for different tasks:
-```bash
-# Use different playbooks for different scenarios
-python3 serial_communicator.py --playbook basic_setup.txt
-python3 serial_communicator.py --playbook firmware_update.txt  
-python3 serial_communicator.py --playbook configuration_backup.txt
-```
-
-## 📋 Typical Workflow
-
-1. **Connect** your Mellanox device via serial cable
-2. **Edit** `playbook.txt` with your desired commands
-3. **Configure** `config.ini` if needed (usually defaults work)
-4. **Run** the tool and select your COM port
-5. **Monitor** progress - the tool handles everything automatically
-6. **Review** results and any error messages
-
-## 🚨 Troubleshooting
-
-### Common Issues
-
-**"No serial ports found"**
-- Check device connection
-- Install device drivers if needed
-- Try different USB port
-
-**"Permission denied" on Linux**
-```bash
-sudo usermod -a -G dialout $USER
-# Log out and back in
-```
-
-**"Timeout waiting for prompt"**
-- Check baud rate in config.ini
-- Verify device is powered on
-- Try increasing timeout value
-
-**"Config parsing errors"**
-- Ensure playbook file exists
-- Check file permissions
-- Verify config.ini syntax
-
-### Getting Help
-
-1. **Run in verbose mode** to see detailed logs:
-   ```bash
-   python3 serial_communicator.py --verbose
-   ```
-
-2. **Check the logs** for specific error messages
-
-3. **Verify your playbook** syntax and commands
-
-4. **Test with a simple playbook** first
-
-## � Troubleshooting
-
-### Common Issues
-
-**"Port is already in use" or "Permission denied"**
-- Close other serial applications (PuTTY, minicom, etc.)
-- On Linux, try: `sudo python3 serial_communicator.py`
-- Check if another instance is running
-
-**"Device requires login" when already logged in**
-- The pre-login detection may have failed
-- Manually add a `SEND \n` at the start of your playbook
-- Check if device has unusual prompt formatting
-
-**"Login steps not being skipped properly"**
-- The improved login filtering should handle most cases automatically
-- If login steps are still executed when already authenticated, check verbose logs
-- Ensure your playbook uses standard login patterns (WAIT login:, SEND admin, etc.)
-- Contact support if login filtering isn't working for your specific device
-
-**Commands fail or timeout**
-- Increase timeout in config.ini
-- Use verbose mode to see actual device responses
-- Verify commands work when typed manually
-
-## �📁 File Structure
+The tool uses a clean modular architecture:
 
 ```
 mellanox-updater/
-├── config.ini              # Main configuration
-├── playbook.txt            # Your command sequences
-├── serial_communicator.py  # Main application
-└── examples/               # Example playbooks
-    ├── basic_config.txt
-    ├── info_gathering.txt
-    └── firmware_update.txt
+├── main.py                     # Application entry point
+├── config/
+│   └── config_manager.py       # Configuration and playbook management
+├── core/
+│   ├── playbook_executor.py    # Command execution and progress tracking
+│   ├── serial_handler.py       # Serial communication
+│   ├── prompt_detector.py      # Automatic prompt detection
+│   └── conditional_logic.py    # IF/ELIF/ELSE logic processor
+├── utils/
+│   ├── logger.py               # Logging and output formatting
+│   ├── output_processor.py     # Text processing and cleanup
+│   └── pagination.py           # Automatic pagination handling
+├── docs/                       # Documentation
+├── examples/                   # Example configurations
+└── tests/                      # Test suites
 ```
 
-## 💡 Tips & Best Practices
-
-- **Start simple**: Test with basic commands first
-- **Use comments**: Add `# comments` to document your playbooks
-- **Check timeouts**: Increase timeout for slow operations
-- **Test commands**: Verify commands work manually first
-- **Backup configs**: Save working playbooks for reuse
-- **Use verbose mode**: When developing or troubleshooting
-
-## 🔒 Safety Notes
-
-- **Test thoroughly** before using on production devices
-- **Have console access** as backup
-- **Save current configs** before making changes
-- **Start with read-only commands** to verify connectivity
-- **Use appropriate timeouts** to avoid hanging
-
----
-
-**Happy automating! 🎉**
-
-For detailed technical information, see `README_DEV.md`.
-
-## 🔀 **NEW: Conditional Logic in Playbooks**
-
-The playbook format now supports conditional statements based on command output:
-
-### Basic Conditional Logic
-```
-SEND show version
-WAIT PROMPT
-
-IF_CONTAINS "SN2700"
-    SEND show interfaces ethernet brief
-    WAIT PROMPT
-ELIF_CONTAINS "SN3700"
-    SEND show interfaces status
-    WAIT PROMPT
-ELSE
-    SEND show interfaces
-    WAIT PROMPT
-ENDIF
-```
-
-## 🛠️ **Troubleshooting**
+## 🔧 Troubleshooting
 
 ### Common Issues
 
-**1. Conditional logic not working as expected**
+**Serial port not found:**
+- Run without `-p` option to see available ports
+- Check device connections
+- Verify user permissions for serial ports
+
+**Login fails:**
+- Verify credentials in config.ini
+- Check if device is already logged in
+- Use `--verbose` for detailed logging
+
+**Commands not executing:**
+- Check playbook syntax
+- Verify prompt detection with `--verbose`
+- Ensure proper WAIT commands after SEND
+
+**Progress bar shows technical details:**
+- This has been fixed in the latest version
+- Both verbose and non-verbose modes now show user-friendly descriptions
+
+### Verbose Mode Debugging
+
+Use `--verbose` to see detailed execution logs:
 ```bash
-# Use verbose mode to see condition evaluation
-python3 serial_communicator.py --verbose
+python main.py --verbose
 ```
+
 This shows:
-- What text is being matched against
-- Whether conditions evaluate to true/false
-- Which conditional blocks are being executed or skipped
+- Detailed command execution logs
+- Serial communication details
+- Conditional logic evaluation
+- Error details and stack traces
 
-**2. Case sensitivity problems**
-```
-# Instead of this (case-sensitive)
-IF_CONTAINS "BGP"
+## 📚 Documentation
 
-# Use this for case-insensitive matching
-IF_CONTAINS_I "BGP"
-```
+- [Developer Documentation](DEVELOPER.md) - Architecture and development guide
+- [Conditional Logic Specification](docs/CONDITIONAL_LOGIC_SPEC.md) - Detailed conditional logic guide
+- [Example Playbooks](examples/) - Sample configurations and playbooks
 
-**3. Complex patterns not matching**
-```
-# Use regex for complex patterns
-IF_REGEX "Temperature.*([0-9]+)C.*Normal"
-```
+## 🤝 Contributing
 
-**4. Serial port access denied**
-```bash
-# On Linux, add user to dialout group
-sudo usermod -a -G dialout $USER
-# Then logout and login again
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Ensure all tests pass
+6. Submit a pull request
 
-# Or run with sudo (temporary solution)
-sudo python3 serial_communicator.py
-```
+## 📄 License
 
-**5. Device not responding**
-- Check cable connections
-- Verify correct COM port selection
-- Ensure device is powered on and accessible
-- Try different baud rates (9600, 38400, 115200)
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-### Debug Mode
-Always use `--verbose` when troubleshooting:
-```bash
-python3 serial_communicator.py --verbose
-```
+## 🔄 Version History
 
-This provides:
-- Detailed connection information
-- Command execution status
-- Output from each command
-- Conditional logic evaluation details
-- Error messages with context
+### v2.0 - Modular Architecture & Smart Progress
+- Complete modular refactor for maintainability
+- Smart command block progress tracking
+- Enhanced conditional logic support
+- Improved error handling and logging
+- Better user experience with intuitive progress bars
 
-## 📁 **Project Structure**
-```
-mellanox-updater/
-├── serial_communicator.py      # Main automation script
-├── config.ini                  # Configuration settings
-├── playbook.txt                # Your command sequence
-├── examples/
-│   └── conditional_playbook_example.txt  # Advanced conditional examples
-├── docs/
-│   ├── CONDITIONAL_LOGIC_SPEC.md         # Detailed conditional logic spec
-│   └── ...
-└── README.md                   # This documentation
-```
-
-## 🤝 **Support**
-
-### Getting Help
-1. **Check verbose output**: Run with `--verbose` flag
-2. **Review examples**: See `examples/` directory for working playbooks
-3. **Check documentation**: See `docs/` directory for detailed specs
-
-### Feature Requests
-The conditional logic system is designed to be extensible. Current capabilities include:
-- Text matching (case-sensitive and case-insensitive)
-- Regular expression patterns
-- Nested conditions with IF/ELIF/ELSE/ENDIF
-
-## 📋 **Changelog**
-
-### Latest Updates
-- ✅ **Conditional Logic**: Full IF/ELIF/ELSE/ENDIF support
-- ✅ **Case Sensitivity Control**: Both case-sensitive and case-insensitive matching
-- ✅ **Regular Expression Support**: Advanced pattern matching with IF_REGEX
-- ✅ **Improved Output Processing**: Clean command output without pagination artifacts
-- ✅ **Enhanced Error Handling**: Better error messages and recovery
-- ✅ **Smart Login Detection**: Automatically skip login steps when already authenticated
-- ✅ **Flexible Playbook Formatting**: No indentation requirements
-- ✅ **Professional Progress Display**: Clean progress bars and status updates
-
----
-
-**🎉 The Mellanox Device Updater now supports intelligent, conditional automation - making your network device management smarter and more efficient!**
+### v1.0 - Initial Release
+- Basic serial communication
+- Simple playbook execution
+- Configuration file support
