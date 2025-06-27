@@ -1,6 +1,6 @@
-# Mellanox Device Updater
+# SerialLink
 
-A Python tool for automating serial communication with Mellanox switches and network devices using configurable playbooks.
+A Python tool for automating serial communication with network devices and switches using configurable playbooks.
 
 ## Table of Contents
 
@@ -916,7 +916,7 @@ Logging in:  29%|████████▊                        | 4/14 [00:0
 ```
 [INFO] Connecting to serial port COM3 at 115200 baud
 [INFO] Waiting for login prompt...
-[DEBUG] Received: "Welcome to Mellanox Switch"
+[DEBUG] Received: "Welcome to Network Switch"
 [DEBUG] Received: "login: "
 [INFO] Sending username: admin
 [DEBUG] Sent: "admin\n"
@@ -971,8 +971,8 @@ chmod 600 config.ini
 chmod 600 *.txt
 
 # Create dedicated directory
-mkdir ~/mellanox-configs
-chmod 700 ~/mellanox-configs
+mkdir ~/device-configs
+chmod 700 ~/device-configs
 ```
 
 ### **Network Security**
@@ -1224,6 +1224,6 @@ done
 
 ---
 
-**🎉 That's it! You're now ready to automate your Mellanox device management like a pro!**
+**🎉 That's it! You're now ready to automate your network device management like a pro!**
 
 *Remember: Start simple with basic playbooks, then gradually add conditional logic as you become more comfortable with the tool.*
