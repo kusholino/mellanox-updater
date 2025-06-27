@@ -1,8 +1,36 @@
 # Mellanox Device Updater
 
-A professional Python tool for automated serial communication with Mellanox switches and network devices. Features robust error handling, automatic pagination, dynamic prompt detection, flexible playbook management, and **powerful conditional logic** for intelligent device automation.
+A professional Python tool for automated serial communication with Mellanox switches and network devices. **Now with a modern modular architecture** for improved maintainability and extensibility.
 
-## ✨ **NEW: Conditional Logic Support**
+Features robust error handling, automatic pagination, dynamic prompt detection, flexible playbook management, and **powerful conditional logic** for intelligent device automation.
+
+## 🏗️ **NEW: Modular Architecture**
+The tool has been refactored into a clean, modular structure with dedicated packages for configuration, core functionality, and utilities. This makes the code easier to maintain, debug, and extend while preserving 100% compatibility with existing configurations and playbooks.
+
+### Project Structure
+```
+mellanox-updater/
+├── main.py                     # New modular entry point
+├── serial_communicator.py      # Original script (legacy)
+├── requirements.txt            # Python dependencies
+├── config.ini                  # Configuration file
+├── config/                     # Configuration management
+│   ├── __init__.py
+│   └── config_manager.py       # Config and playbook parsing
+├── core/                       # Core functionality
+│   ├── __init__.py
+│   ├── conditional_logic.py    # IF/ELIF/ELSE/ENDIF processing
+│   ├── playbook_executor.py    # Command execution logic
+│   ├── prompt_detector.py      # Device prompt detection
+│   └── serial_handler.py       # Serial communication
+└── utils/                      # Utility modules
+    ├── __init__.py
+    ├── logger.py               # Logging and output formatting
+    ├── output_processor.py     # Output cleaning and processing
+    └── pagination.py           # Pagination handling
+```
+
+## ✨ **Conditional Logic Support**
 Execute different commands based on device output! Automatically adapt to different switch models, software versions, or configurations:
 
 ```
@@ -27,8 +55,28 @@ ENDIF
 1. Clone or download this repository
 2. Install required packages:
 ```bash
-pip install pyserial tqdm
+pip install -r requirements.txt
+# or manually: pip install pyserial tqdm
 ```
+
+### Usage
+
+#### **NEW: Modular Version (Recommended)**
+```bash
+# Run with default configuration
+python main.py
+
+# Specify port and credentials  
+python main.py -p COM3 -u admin --password secret
+
+# Enable verbose logging
+python main.py --verbose
+
+# Use custom configuration
+python main.py -c custom_config.ini
+```
+
+#### **Legacy Version (Still Available)**
 
 ### Basic Usage
 1. **Configure your device settings** in `config.ini`
