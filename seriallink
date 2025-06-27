@@ -1,0 +1,8 @@
+#!/bin/bash
+cd "$(dirname "$0")"
+if [ -d "seriallink-env" ] && [ -f "seriallink-env/bin/python" ]; then
+    exec seriallink-env/bin/python main.py "$@"
+else
+    echo "Error: Environment not ready. Run: ./setup.sh setup"
+    exit 1
+fi
