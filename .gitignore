@@ -62,13 +62,8 @@ config.ini
 playbook.txt
 *.playbook
 
-# Tests and Documentation
+# Tests
 tests/
-docs/
 *.md
 !README.md
-!README_DEV.md
-!PROJECT_SUMMARY.md
-
-# Examples
-examples/
+!DEVELOPER.md
