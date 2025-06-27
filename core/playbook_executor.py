@@ -1,5 +1,5 @@
 """
-Playbook executor for the Mellanox device updater.
+Playbook executor for the SerialLink device updater.
 
 This module handles the execution of playbook commands including:
 - Processing individual commands

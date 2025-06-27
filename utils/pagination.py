@@ -1,5 +1,5 @@
 """
-Pagination handling utilities for Mellanox Device Updater.
+Pagination handling utilities for SerialLink.
 
 Automatically detects and responds to device pagination prompts like:
 - --More--

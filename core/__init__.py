@@ -1,5 +1,5 @@
 """
-Core modules for the Mellanox device updater.
+Core modules for the SerialLink device updater.
 
 This package contains the core functionality including:
 - Prompt detection and device state management

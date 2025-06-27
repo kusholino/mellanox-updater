@@ -1,5 +1,5 @@
 """
-Configuration modules for the Mellanox device updater.
+Configuration modules for the SerialLink device updater.
 
 This package contains configuration management including:
 - Configuration file parsing and validation

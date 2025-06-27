@@ -25,7 +25,7 @@ share/python-wheels/
 MANIFEST
 
 # Virtual Environment
-mellanox-updater/
+seriallink-env/
 venv/
 env/
 ENV/

@@ -1,5 +1,5 @@
 """
-Logging and output formatting utilities for the Mellanox device updater.
+Logging and output formatting utilities for the SerialLink device updater.
 
 This module provides comprehensive logging functionality including:
 - Colored console output with different message types

@@ -1,4 +1,4 @@
-# Mellanox Switch Configuration Template
+# Network Device Configuration Template
 # Copy this file to config.ini and customize for your environment
 
 [serial]

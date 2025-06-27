@@ -1,5 +1,5 @@
 """
-Configuration management for Mellanox Device Updater.
+Configuration management for SerialLink.
 
 Handles loading and parsing of configuration files and playbooks.
 """

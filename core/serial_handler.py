@@ -1,5 +1,5 @@
 """
-Serial communication handler for the Mellanox device updater.
+Serial communication handler for the SerialLink device updater.
 
 This module handles all serial port operations including:
 - Opening and closing serial connections

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Mellanox Device Updater - Main Entry Point
+SerialLink - Main Entry Point
 
-A modular tool for automating serial communication with Mellanox devices
+A modular tool for automating serial communication with network devices
 using configurable playbooks. Supports conditional logic, pagination handling,
 and comprehensive logging.
 
@@ -40,8 +40,8 @@ from core.playbook_executor import PlaybookExecutor
 from config.config_manager import ConfigManager
 
 
-class MellanoxUpdater:
-    """Main application class for the Mellanox device updater."""
+class SerialLinkUpdater:
+    """Main application class for the serial device updater."""
     
     def __init__(self):
         """Initialize the application."""
@@ -68,7 +68,7 @@ class MellanoxUpdater:
             True if arguments parsed successfully, False if should exit
         """
         parser = argparse.ArgumentParser(
-            description="Mellanox Device Updater - Automated serial communication tool",
+            description="SerialLink - Automated serial communication tool",
             formatter_class=argparse.RawDescriptionHelpFormatter,
             epilog="""
 Examples:
@@ -127,7 +127,7 @@ Examples:
         try:
             # Initialize logger
             self.logger = Logger(verbose=self.verbose, use_colors=self.use_colors)
-            self.logger.log_section("Mellanox Device Updater")
+            self.logger.log_section("SerialLink")
             self.logger.log_info("Initializing components...")
             
             # Initialize configuration manager
@@ -406,7 +406,7 @@ Examples:
 
 def main():
     """Entry point for the application."""
-    app = MellanoxUpdater()
+    app = SerialLinkUpdater()
     exit_code = app.run()
     sys.exit(exit_code)
 

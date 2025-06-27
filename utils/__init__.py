@@ -1,5 +1,5 @@
 """
-Utility modules for the Mellanox device updater.
+Utility modules for the SerialLink device updater.
 
 This package contains utility functions and classes including:
 - Logging and output formatting

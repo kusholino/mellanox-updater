@@ -1,5 +1,5 @@
 """
-Output processing utilities for Mellanox Device Updater.
+Output processing utilities for SerialLink.
 
 Handles cleaning and formatting of command output:
 - Removes command echoes

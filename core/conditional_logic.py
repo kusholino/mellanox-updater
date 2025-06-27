@@ -1,5 +1,5 @@
 """
-Conditional logic processor for Mellanox Device Updater.
+Conditional logic processor for SerialLink.
 
 Handles IF/ELIF/ELSE/ENDIF statements with support for:
 - Text matching (case-sensitive and case-insensitive)

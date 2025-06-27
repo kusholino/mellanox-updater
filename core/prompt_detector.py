@@ -1,5 +1,5 @@
 """
-Prompt detection utilities for Mellanox Device Updater.
+Prompt detection utilities for SerialLink.
 
 Automatically detects command prompts from various network devices:
 - hostname>
