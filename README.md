@@ -1,8 +1,39 @@
 # SerialLink
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)](https://github.com/kusholino/seriallink)
+
 A practical tool for automating serial communication with network devices, switches, and servers. Instead of manually typing commands into a terminal session, you write a simple playbook that defines what commands to run and SerialLink handles the rest.
 
 Perfect for network administrators, system engineers, and anyone who needs to run the same commands on multiple devices repeatedly.
+
+**🎯 Key Benefits:**
+- **Simple Syntax**: Easy-to-read SEND/WAIT commands anyone can understand
+- **Smart Automation**: Automatic pagination, prompt detection, and login state checking  
+- **Conditional Logic**: IF/ELSE statements for dynamic decision making
+- **Zero Setup**: Single command installation with comprehensive validation
+- **Cross Platform**: Works on Linux, macOS, and Windows
+
+## Table of Contents
+
+- [What It Does](#what-it-does)
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Project Structure](#project-structure)
+- [Basic Usage](#basic-usage)
+- [Real-World Examples](#real-world-examples)
+- [Command Reference](#command-reference)
+- [Configuration Options](#configuration-options)
+- [Command Line Options](#command-line-options)
+- [Troubleshooting](#troubleshooting)
+- [Error Codes](#error-codes)
+- [Advanced Features](#advanced-features)
+- [Getting Help](#getting-help)
+- [Tips for Success](#tips-for-success)
+- [Contributing](#contributing)
+- [License](#license)
+- [Support](#support)
 
 ## What It Does
 
@@ -81,6 +112,33 @@ Get up and running in under 2 minutes:
 ```
 
 That's it. No manual configuration, no complex setup steps, no environment tweaking.
+
+## Project Structure
+
+SerialLink follows a clean modular architecture:
+
+```
+seriallink/
+├── main.py              # Entry point and main application logic
+├── setup.sh             # Automated setup and installation script
+├── seriallink           # Launcher script (created by setup)
+├── config.ini.template  # Configuration template
+├── core/                # Core functionality modules
+│   ├── playbook_executor.py    # Command execution engine
+│   ├── serial_handler.py       # Serial communication
+│   ├── conditional_logic.py    # IF/ELSE processing
+│   └── prompt_detector.py      # Smart prompt detection
+├── config/              # Configuration management
+│   └── config_manager.py       # INI and playbook parsing
+├── utils/               # Utility modules
+│   ├── logger.py               # Progress tracking and logging
+│   ├── pagination.py           # Automatic page handling
+│   └── output_processor.py     # Text cleaning and processing
+├── examples/            # Ready-to-use playbook examples
+├── docs/                # Comprehensive documentation
+│   └── DEVELOPER.md            # Developer guide
+└── tests/               # Test suite for validation
+```
 
 ## Basic Usage
 
@@ -430,3 +488,49 @@ Check the `examples/` directory for ready-to-use playbooks:
 7. **Check Conditionals**: Use exact text matching or try case-insensitive variants
 
 SerialLink makes serial device automation straightforward. No complex scripting languages, no intricate setup procedures - just simple commands that work.
+
+## Contributing
+
+We welcome contributions! SerialLink is built with a modular architecture that makes it easy to add new features.
+
+### Development Setup
+
+```bash
+# Clone and set up development environment
+git clone https://github.com/kusholino/seriallink.git
+cd seriallink
+./setup.sh
+
+# Run tests
+python tests/test_quick.py           # Fast unit tests
+python tests/test_comprehensive.py  # Full integration tests
+```
+
+### Adding Features
+
+- **New Commands**: Add to `config/config_manager.py` and `core/playbook_executor.py`
+- **New Conditionals**: Extend `core/conditional_logic.py`
+- **Device Support**: Enhance `core/prompt_detector.py` and `utils/output_processor.py`
+- **Documentation**: Update both user README and `docs/DEVELOPER.md`
+
+See `docs/DEVELOPER.md` for comprehensive development guidelines, architecture details, and debugging guides.
+
+### Areas for Contribution
+
+- [ ] Plugin system for device-specific features
+- [ ] Web interface for remote management
+- [ ] Additional conditional logic operators
+- [ ] Enhanced output processing for specific vendors
+- [ ] Performance optimizations for large playbooks
+- [ ] Additional test coverage and validation
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Support
+
+- **Documentation**: Check `docs/DEVELOPER.md` for technical details
+- **Examples**: See `examples/` directory for ready-to-use playbooks
+- **Issues**: Report bugs or request features via GitHub issues
+- **Questions**: Use verbose mode (`--verbose`) for detailed debugging output
