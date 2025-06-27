@@ -1,102 +1,365 @@
-# 🚀 Mellanox Device Updater
+# Mellanox Device Updater
 
-**The Complete Solution for Automated Mellanox Device Management**
+A Python tool for automating serial communication with Mellanox switches and network devices using configurable playbooks.
 
-A powerful, professional Python tool designed for system administrators, network engineers, and DevOps teams who need to automate serial communication with Mellanox switches and network devices. This tool eliminates manual, error-prone device configuration tasks through intelligent automation.
+## Table of Contents
 
----
+- [Overview](#overview)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Command Line Options](#command-line-options)
+- [Configuration](#configuration)
+- [Playbook Format](#playbook-format)
+- [Conditional Logic](#conditional-logic)
+- [Examples](#examples)
+- [Troubleshooting](#troubleshooting)
+- [Advanced Usage](#advanced-usage)
 
-## 📖 Table of Contents
+## Overview
 
-- [🎯 What This Tool Does](#-what-this-tool-does)
-- [✨ Key Features](#-key-features)
-- [⚡ Quick Start Guide](#-quick-start-guide)
-- [🔧 Installation](#-installation)
-- [📱 Running the Tool](#-running-the-tool)
-- [⚙️ Configuration](#️-configuration)
-- [📝 Creating Playbooks](#-creating-playbooks)
-- [🔄 Conditional Logic](#-conditional-logic)
-- [🎯 Command Reference](#-command-reference)
-- [🛠️ Troubleshooting](#️-troubleshooting)
-- [📊 Understanding Progress Output](#-understanding-progress-output)
-- [🔐 Security & Best Practices](#-security--best-practices)
-- [📚 Examples & Use Cases](#-examples--use-cases)
+This tool automates device configuration tasks that typically require manual intervention. Instead of manually typing commands into a terminal session, you create a playbook (text file) that defines the sequence of commands to execute.
 
----
+The tool provides:
+- Automated serial port detection and communication
+- Progress tracking with meaningful descriptions
+- Conditional command execution based on device responses
+- Automatic pagination handling
+- Comprehensive error handling and logging
 
-## 🎯 What This Tool Does
+## Installation
 
-The Mellanox Device Updater automates complex device configuration tasks that traditionally require manual intervention. Instead of manually typing commands into a terminal session, you create a "playbook" (a simple text file) that defines the sequence of commands to execute.
+### Requirements
+- Python 3.8 or higher
+- Serial port access permissions
 
-**Before (Manual Process):**
-```
-1. Connect to device via serial
-2. Wait for login prompt
-3. Type username
-4. Wait for password prompt  
-5. Type password
-6. Wait for command prompt
-7. Type "show version"
-8. Wait for output
-9. Check if specific version
-10. If yes, run license command
-11. If no, run different command
-12. Type "show configuration"
-13. Wait for output
-... and so on
+### Setup
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Copy configuration template
+cp config.ini.template config.ini
+
+# Edit configuration as needed
+nano config.ini
 ```
 
-**After (Automated with This Tool):**
+## Quick Start
+
+1. **Basic execution with default settings:**
+   ```bash
+   python main.py
+   ```
+
+2. **Specify credentials:**
+   ```bash
+   python main.py -u admin --password your_password
+   ```
+
+3. **Use verbose logging:**
+   ```bash
+   python main.py --verbose
+   ```
+
+4. **Specify serial port and baudrate:**
+   ```bash
+   python main.py -p /dev/ttyUSB0 -b 115200
+   ```
+
+## Command Line Options
+
 ```
-1. Create playbook.txt with commands
-2. Run: python main.py
-3. Watch automated execution with progress bar
-4. Review results
+Usage: python main.py [options]
+
+Serial Communication:
+  -p, --port PORT          Serial port (e.g., COM3, /dev/ttyUSB0)
+  -b, --baudrate RATE      Baud rate (default: 115200)
+
+Configuration:
+  -c, --config FILE        Configuration file (default: config.ini)
+  --playbook FILE          Playbook file (overrides config setting)
+
+Authentication:
+  -u, --username USER      Username for device login
+  --password PASS          Password for device login
+
+Output Control:
+  -v, --verbose            Enable verbose logging
+  --no-color               Disable colored output
+  --no-pagination          Disable automatic pagination handling
+  --prompt-symbol SYMBOL   Override prompt symbol (default: >)
+
+Help:
+  -h, --help               Show help message
 ```
 
----
+## Configuration
 
-## ✨ Key Features
+### config.ini Structure
 
-### 🏗️ **Professional Architecture**
-- **Modular Design**: Clean, maintainable codebase split into logical components
-- **Error Recovery**: Automatic retry mechanisms and graceful error handling
-- **Production Ready**: Extensively tested and documented for enterprise use
+```ini
+[Serial]
+port = /dev/ttyUSB0
+baudrate = 115200
+timeout = 30
 
-### 📊 **Intelligent Progress Tracking**
-- **Smart Progress Bars**: Shows meaningful descriptions like "Logging in" or "Executing: show version"
-- **Real-time Feedback**: See exactly what's happening at each step
-- **Time Estimates**: Estimated completion times based on command complexity
+[Playbook]
+file = playbook.txt
 
-### 🔄 **Advanced Conditional Logic**
-- **IF/ELIF/ELSE Support**: Make decisions based on device responses
-- **Text Pattern Matching**: Check if output contains specific text or version numbers
-- **Nested Conditions**: Complex decision trees for sophisticated automation
+[Logging]
+verbose = false
+```
 
-### 🔧 **Automatic Device Detection**
-- **Port Auto-Discovery**: Automatically finds and lists available serial ports
-- **Login State Detection**: Skips login if device is already authenticated
-- **Prompt Recognition**: Automatically detects different command prompt styles
+### Configuration Priority
 
-### 🎨 **User-Friendly Interface**
-- **Colored Output**: Easy-to-read color-coded messages and progress indicators
-- **Verbose Mode**: Detailed logging for troubleshooting and debugging
-- **Clean Progress Display**: No more technical jargon cluttering your screen
+Settings are applied in this order (highest to lowest priority):
+1. Command line arguments
+2. Configuration file
+3. Built-in defaults
 
-### ⚡ **Robust Communication**
-- **Timeout Management**: Configurable timeouts prevent hanging on unresponsive devices
-- **Pagination Handling**: Automatically handles paged output (--More-- prompts)
-- **Multiple Baud Rates**: Support for different communication speeds
+## Playbook Format
 
----
+Playbooks use simple command syntax:
 
-## ⚡ Quick Start Guide
+### Basic Commands
 
-### 🏃‍♂️ **1-Minute Setup**
+```plaintext
+# Send command to device
+SEND show version
+
+# Wait for specific text
+WAIT login:
+
+# Wait for command prompt
+WAIT PROMPT
+
+# Pause execution
+PAUSE 5
+```
+
+### Login Sequence Example
+
+```plaintext
+WAIT login:
+SEND admin
+WAIT Password:
+SEND your_password
+WAIT PROMPT
+```
+
+### Command Execution Example
+
+```plaintext
+SEND show system
+WAIT PROMPT
+SEND show interfaces
+WAIT PROMPT
+```
+
+## Conditional Logic
+
+Execute commands based on device responses:
+
+### Basic Conditionals
+
+```plaintext
+SEND show version
+WAIT PROMPT
+IF_CONTAINS: Version 2.1
+  SEND show license
+  WAIT PROMPT
+ENDIF
+```
+
+### Multiple Conditions
+
+```plaintext
+SEND show system
+WAIT PROMPT
+IF_CONTAINS: Temperature: OK
+  SEND show interfaces
+  WAIT PROMPT
+ELIF_CONTAINS: Temperature: WARNING
+  SEND show thermal-status
+  WAIT PROMPT
+ELSE
+  SEND show critical-alerts
+  WAIT PROMPT
+ENDIF
+```
+
+### Supported Conditional Types
+
+- `IF_CONTAINS: text` - Execute if output contains text
+- `IF_NOT_CONTAINS: text` - Execute if output doesn't contain text
+- `ELIF_CONTAINS: text` - Else-if contains text
+- `ELSE` - Execute if no conditions met
+- `ENDIF` - End conditional block
+
+## Examples
+
+### Firmware Update Check
+
+```plaintext
+# Check current firmware version
+SEND show version
+WAIT PROMPT
+
+# Update if old version detected
+IF_CONTAINS: firmware-1.0
+  SEND copy tftp://192.168.1.100/firmware-2.0 flash:
+  WAIT PROMPT
+  SEND reload
+  WAIT PROMPT
+ENDIF
+```
+
+### Configuration Backup
+
+```plaintext
+# Login sequence
+WAIT login:
+SEND admin
+WAIT Password:
+SEND backup123
+WAIT PROMPT
+
+# Backup configuration
+SEND show configuration
+WAIT PROMPT
+SEND copy running-config tftp://192.168.1.100/backup.conf
+WAIT PROMPT
+```
+
+### Health Check
+
+```plaintext
+SEND show system-health
+WAIT PROMPT
+
+IF_CONTAINS: Status: OK
+  SEND show brief-status
+  WAIT PROMPT
+ELSE
+  SEND show detailed-diagnostics
+  WAIT PROMPT
+  SEND show error-logs
+  WAIT PROMPT
+ENDIF
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**Serial Port Access Denied**
+```bash
+# Linux: Add user to dialout group
+sudo usermod -a -G dialout $USER
+# Then logout and login again
+
+# Check port permissions
+ls -l /dev/ttyUSB0
+```
+
+**Device Not Responding**
+- Verify cable connections
+- Check baudrate settings
+- Ensure device is powered on
+- Try different serial port
+
+**Commands Not Executing**
+- Enable verbose mode: `python main.py --verbose`
+- Check playbook syntax
+- Verify conditional logic
+- Ensure proper line endings in playbook file
+
+**Progress Bar Stuck**
+- Check for pagination prompts in device output
+- Use `--no-pagination` if automatic handling fails
+- Verify timeout settings in config.ini
+
+### Debug Mode
+
+Enable verbose logging for detailed information:
 
 ```bash
-# 1. Install Python dependencies
-pip install -r requirements.txt
+python main.py --verbose
+```
+
+This shows:
+- Each command sent to device
+- Device responses
+- Progress tracking details
+- Conditional logic evaluation
+- Error messages with context
+
+### Log Analysis
+
+The tool provides detailed error messages:
+- Line numbers for playbook syntax errors
+- Specific timeout information
+- Serial communication status
+- Conditional evaluation results
+
+## Advanced Usage
+
+### Custom Prompt Detection
+
+Override automatic prompt detection:
+
+```bash
+python main.py --prompt-symbol "#"
+```
+
+### Pagination Handling
+
+Disable automatic pagination if needed:
+
+```bash
+python main.py --no-pagination
+```
+
+### Multiple Device Types
+
+Use different playbooks for different devices:
+
+```bash
+python main.py --playbook cisco_commands.txt
+python main.py --playbook juniper_commands.txt
+```
+
+### Batch Operations
+
+Create device-specific configuration files:
+
+```bash
+# Device 1
+python main.py -c device1_config.ini
+
+# Device 2  
+python main.py -c device2_config.ini
+```
+
+### Integration Scripts
+
+Embed in shell scripts for automation:
+
+```bash
+#!/bin/bash
+echo "Starting device configuration..."
+python main.py -u admin --password $DEVICE_PASSWORD
+if [ $? -eq 0 ]; then
+    echo "Configuration successful"
+else
+    echo "Configuration failed"
+    exit 1
+fi
+```
+
+---
+
+For additional help or bug reports, refer to the project documentation or contact the development team.
 
 # 2. Run with interactive port selection
 python main.py
