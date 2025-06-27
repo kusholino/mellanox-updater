@@ -19,7 +19,6 @@ Options:
     --no-color                  Disable colored output
     --no-pagination             Disable automatic pagination handling
     --prompt-symbol <symbol>    Override prompt symbol (default: >)
-    --legacy-mode                Run in legacy mode (more compatible with original script)
     --help                      Show this help message
 """
 
@@ -61,7 +60,6 @@ class MellanoxUpdater:
         self.use_colors = True
         self.use_pagination = True
         self.prompt_symbol = ">"
-        self.legacy_mode = False
     def parse_arguments(self) -> bool:
         """
         Parse command line arguments.
@@ -99,8 +97,6 @@ Examples:
                           help="Disable automatic pagination handling")
         parser.add_argument("--prompt-symbol", default=">",
                           help="Override prompt symbol (default: >)")
-        parser.add_argument("--legacy-mode", action="store_true",
-                          help="Run in legacy mode (more compatible with original script)")
         
         try:
             args = parser.parse_args()
@@ -115,7 +111,6 @@ Examples:
             self.use_colors = not args.no_color
             self.use_pagination = not args.no_pagination
             self.prompt_symbol = args.prompt_symbol
-            self.legacy_mode = args.legacy_mode
             
             return True
             
